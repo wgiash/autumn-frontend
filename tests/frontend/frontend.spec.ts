@@ -10,9 +10,9 @@ async function openPage(page: Page, path: string) {
   );
   // Route headings also appear in loading fallbacks; wait for the report itself.
   if (path.startsWith("/bookings")) {
-    await expect(
-      page.locator('section[aria-labelledby="list-title"] details'),
-    ).toHaveCount(10);
+    const rows = page.locator('section[aria-labelledby="list-title"] details');
+    await expect(rows).toHaveCount(10);
+    await expect(rows.first()).toBeVisible();
   } else {
     await expect(
       page.getByRole("group", { name: "Chart metric for all website bookings" }),

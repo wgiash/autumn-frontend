@@ -1,6 +1,7 @@
 import type { OutcomeData } from "@/lib/contracts";
 import { DetailLink } from "@/components/detail-link";
 import { Greeting } from "@/components/greeting";
+import { MonthWord } from "@/components/month-word";
 import { Download } from "@/components/icons";
 import { money } from "@/components/bookings/format";
 
@@ -34,7 +35,7 @@ export function Hero({
         <div className="min-w-0">
           <Greeting name="Don" />
           <h1 className="mt-2 max-w-[40.625rem] font-display text-display/[1.15] font-light tracking-[-0.02em] text-balance">
-            Your {monthName} with Autumn.
+            Your <MonthWord>{monthName}</MonthWord> with Autumn.
           </h1>
         </div>
 

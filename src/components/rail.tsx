@@ -39,7 +39,7 @@ function CompletedSection({
       </DisclosureSummary>
       {horizontal ? (
         <div className="relative -mx-(--margin)">
-          <div className="square-scroll-x flex gap-2 px-(--margin) pt-1 pb-2">
+          <div className="square-scroll-x flex items-start gap-2 px-(--margin) pt-1 pb-2">
             {completed.map((action) => (
               <ActionCard key={action.datetime} action={action} horizontal />
             ))}
@@ -91,7 +91,7 @@ export function RailRow({ actions, monthLabel }: RailProps) {
       </div>
 
       <div className="relative -mx-(--margin) -my-4">
-        <div className="square-scroll-x flex gap-2 px-(--margin) py-4">
+        <div className="square-scroll-x flex items-start gap-2 px-(--margin) py-4">
           {actions.planned.map((action) => (
             <ActionCard key={action.datetime} action={action} horizontal />
           ))}
