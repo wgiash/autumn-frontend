@@ -28,7 +28,7 @@ export function BookingRow({
 }) {
   const reduce = useReducedMotion();
   /* while a sort or filter glides the row to a new position it softens —
-     a touch of blur, fade and scale — and re-emerges on arrival */
+     a touch of blur and fade — and re-emerges on arrival */
   const [moving, setMoving] = useState(false);
   const softened = moving && !reduce;
   return (
@@ -57,7 +57,6 @@ export function BookingRow({
         layout: { duration: 0.3, ease: EASE },
         opacity: { duration: 0.22, ease: EASE, delay: enterDelay },
         filter: { duration: 0.22, ease: EASE, delay: enterDelay },
-        scale: { duration: 0.22, ease: EASE },
       }}
       className="group/bk mb-1.5 rounded border border-transparent bg-paper-2 transition-colors duration-200 open:border-hairline open:bg-white">
       <summary
