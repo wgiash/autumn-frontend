@@ -198,10 +198,14 @@ body:has(dialog[open]) .nav-veil {
   }
 }
 
-/* the hero's month name blur-emerges in place; `both` keeps it hidden on
-   the very first frame, before the animation clock starts */
+/* The hero's month name blur-emerges in place; `both` keeps it hidden
+   through the small delay. will-change lifts the span onto its own
+   compositor layer so the tween keeps rendering while the main thread is
+   busy hydrating — without it, Chrome shows the first and last frame and
+   nothing between; the delay lets the worst of the load jank pass. */
 .month-word-in {
-  animation: month-word-in 320ms var(--ease) both;
+  animation: month-word-in 400ms var(--ease) 120ms both;
+  will-change: opacity, filter;
 }
 @keyframes month-word-in {
   from {
