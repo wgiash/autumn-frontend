@@ -266,6 +266,10 @@ details[open]::details-content {
     overflow-y: auto;
     scrollbar-gutter: stable;
     padding-right: 24px;
+    /* scroll anchoring fights the rows' FLIP animations: the browser
+       chases the moving rows while motion measures them, and the two
+       corrections compound into a displaced list */
+    overflow-anchor: none;
   }
   .square-scroll::-webkit-scrollbar {
     width: 6px;

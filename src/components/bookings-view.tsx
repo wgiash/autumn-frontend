@@ -1,5 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
+import { motion } from "motion/react";
 import type { Booking } from "@/components/bookings/model";
 import type { InsightsData } from "@/lib/contracts";
 import { CarouselFades } from "@/components/carousel-fades";
@@ -45,7 +46,13 @@ export function BookingsView({
         />
         <BookingInsightSidebar data={insights} />
       </aside>
-      <div className="square-scroll min-w-0 pt-29 pb-8 max-[1000px]:px-(--margin) max-[1000px]:[scrollbar-gutter:auto]">
+      {/* layoutScroll: the rows' FLIP animations live inside this
+          scroller — without it, motion measures their positions blind to
+          scroll changes and a sort can strand every row mid-air */}
+      <motion.div
+        layoutScroll
+        className="square-scroll min-w-0 pt-29 pb-8 max-[1000px]:px-(--margin) max-[1000px]:[scrollbar-gutter:auto]"
+      >
         <section aria-label="Your bookings">
           <p className="text-sm/5 text-ink-72">All time bookings</p>
           <h1 className="mt-2 max-w-[40.625rem] font-display text-display/[1.15] font-light tracking-[-0.02em] text-balance">
@@ -95,7 +102,7 @@ export function BookingsView({
           </section>
         </section>
         <BookingTable controller={bookings} monthLabel={monthLabel} />
-      </div>
+      </motion.div>
       <BookingInsightDialog
         panel={panel}
         panelRef={panelRef}
