@@ -58,25 +58,27 @@ async function main() {
       console.log(`PASS  ${month}: calendar totals, missing comparisons, forecast totals, valid chart`);
     }
 
-    // Temporary mirrors keep the rollback test entirely separate from real records.
-    // With max:1, all statements use this session until the connection closes.
-    for (const table of tables) {
-      await sql`create temporary table ${sql(table)} (id text primary key)`;
-      await sql`insert into ${sql(table)} values ('original')`;
-    }
-    const [resolved] = await sql<{ safe: boolean }[]>`
-      select bool_and(to_regclass(name) = to_regclass('pg_temp.' || name)) as safe
-      from unnest(${tables}::text[]) as name`;
-    assert.equal(resolved.safe, true, "Reset test must resolve only temporary tables");
-    const simulatedFailure = new Error("simulated insert failure");
-    await assert.rejects(replaceDemoData(sql, async transaction => {
-      await transaction`insert into bookings values ('replacement')`;
-      throw simulatedFailure;
-    }), error => error === simulatedFailure);
-    for (const table of tables) {
-      const rows = await sql<{ id: string }[]>`select id from ${sql(table)}`;
-      assert.deepEqual(rows.map(row => row.id), ["original"]);
-    }
+    // One transaction pins the server session even behind a transaction pooler.
+    // Temporary mirrors shadow every reset target and disappear on commit.
+    await sql.begin(async transaction => {
+      for (const table of tables) {
+        await transaction`create temporary table ${transaction(table)} (id text primary key) on commit drop`;
+        await transaction`insert into ${transaction(table)} values ('original')`;
+      }
+      const [resolved] = await transaction<{ safe: boolean }[]>`
+        select bool_and(to_regclass(name) = to_regclass('pg_temp.' || name)) as safe
+        from unnest(${tables}::text[]) as name`;
+      assert.equal(resolved.safe, true, "Reset test must resolve only temporary tables");
+      const simulatedFailure = new Error("simulated insert failure");
+      await assert.rejects(replaceDemoData(transaction, async replacement => {
+        await replacement`insert into bookings values ('replacement')`;
+        throw simulatedFailure;
+      }), error => error === simulatedFailure);
+      for (const table of tables) {
+        const rows = await transaction<{ id: string }[]>`select id from ${transaction(table)}`;
+        assert.deepEqual(rows.map(row => row.id), ["original"]);
+      }
+    });
     console.log("PASS  Failed seed replacement rolls back truncation and every insert (temporary tables only)");
   } finally {
     await sql.end();
