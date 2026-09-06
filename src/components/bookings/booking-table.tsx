@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { ChevronDown } from "@/components/icons";
 import { BookingRow, ROW } from "./booking-row";
@@ -68,10 +68,16 @@ export function BookingTable({
 
   /* ids on screen last render: rows not in the set are newly appended
      (a broadened filter, a Show-more page) and stagger in */
-  const seenIds = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    seenIds.current = new Set(visible.map((b) => b.id));
-  });
+  const [rowSnapshot, setRowSnapshot] = useState(() => ({
+    rows: visible,
+    previousIds: new Set<string>(),
+  }));
+  if (rowSnapshot.rows !== visible) {
+    setRowSnapshot({
+      rows: visible,
+      previousIds: new Set(rowSnapshot.rows.map((booking) => booking.id)),
+    });
+  }
   let newIndex = 0;
 
   return (
@@ -173,7 +179,7 @@ export function BookingTable({
              with a fold, and freshly-appended pages stagger in */
           <AnimatePresence initial={false} mode="popLayout">
             {visible.map((b) => {
-              const isNew = !seenIds.current.has(b.id);
+              const isNew = !rowSnapshot.previousIds.has(b.id);
               const delay = isNew ? Math.min(newIndex++ * 0.03, 0.3) : 0;
               return <BookingRow key={b.id} b={b} enterDelay={delay} />;
             })}

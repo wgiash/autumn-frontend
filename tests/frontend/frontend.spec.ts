@@ -66,7 +66,11 @@ test("overview layout, disclosures, and weekly figures stay unchanged", async ({
   await savings.getByText("How this is estimated", { exact: true }).click();
   await savings.getByText("Search visibility", { exact: true }).click();
   await expect(savings).toHaveScreenshot("savings-expanded.png", {
-    style: "body > header { visibility: hidden; }",
+    /* assertion-level stylePath replaces the config's, so both files ride */
+    stylePath: [
+      "./tests/frontend/screenshot.css",
+      "./tests/frontend/hide-header.css",
+    ],
   });
 });
 

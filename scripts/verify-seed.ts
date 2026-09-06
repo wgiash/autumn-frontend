@@ -145,7 +145,18 @@ async function main() {
   });
   check(
     "August: 52 chart weeks match chart-data.ts (all fields incl. priors)",
-    august.trend.weeks,
+    /* compare only the canonical fields — the query layer also returns
+       prior-year traffic (priorAdViews/priorVisits) for the ghost curves,
+       which the canon file never carried */
+    august.trend.weeks.map((w) => ({
+      start: w.start,
+      adViews: w.adViews,
+      visits: w.visits,
+      bookings: w.bookings,
+      rev: w.rev,
+      priorBookings: w.priorBookings,
+      priorRev: w.priorRev,
+    })),
     WEEKS.map((w) => ({
       start: w.start,
       adViews: w.adViews,
@@ -155,6 +166,13 @@ async function main() {
       priorBookings: w.priorBookings,
       priorRev: w.priorRev,
     })),
+  );
+  check(
+    "August: every chart week carries prior-year traffic for the ghosts",
+    august.trend.weeks.every(
+      (w) => typeof w.priorAdViews === "number" && typeof w.priorVisits === "number",
+    ),
+    true,
   );
   check("August: forecast matches chart-data FORECAST", august.trend.forecast, FORECAST.map((f) => ({ start: f.start, rev: f.rev })));
 

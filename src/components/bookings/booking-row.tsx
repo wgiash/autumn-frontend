@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import type { Booking } from "../bookings-data";
 import { ChevronDown } from "@/components/icons";
@@ -26,11 +27,21 @@ export function BookingRow({
   enterDelay?: number;
 }) {
   const reduce = useReducedMotion();
+  /* while a sort or filter glides the row to a new position it softens —
+     a touch of blur, fade and scale — and re-emerges on arrival */
+  const [moving, setMoving] = useState(false);
+  const softened = moving && !reduce;
   return (
     <motion.details
       layout={reduce ? false : "position"}
+      onLayoutAnimationStart={() => setMoving(true)}
+      onLayoutAnimationComplete={() => setMoving(false)}
       initial={reduce ? false : { opacity: 0, filter: "blur(4px)" }}
-      animate={{ opacity: 1, filter: "blur(0px)" }}
+      animate={{
+        opacity: softened ? 0.72 : 1,
+        filter: softened ? "blur(2.5px)" : "blur(0px)",
+        scale: softened ? 0.98 : 1,
+      }}
       /* popLayout lifts the exiting row out of flow, so it blurs away in
          place while the surviving rows glide on transforms alone — no
          per-frame reflow, which is what made the fold stutter */
@@ -47,6 +58,7 @@ export function BookingRow({
         layout: { duration: 0.3, ease: EASE },
         opacity: { duration: 0.22, ease: EASE, delay: enterDelay },
         filter: { duration: 0.22, ease: EASE, delay: enterDelay },
+        scale: { duration: 0.22, ease: EASE },
       }}
       className="group/bk mb-1.5 rounded border border-transparent bg-paper-2 transition-colors duration-200 open:border-hairline open:bg-white">
       <summary

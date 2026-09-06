@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Autumn — marketing dashboard
 
-## Getting Started
+A calm, hospitality-native marketing dashboard for The Brass Lantern, an
+independent inn in Stowe, VT. Two connected screens: the **Overview**
+answers "is Autumn getting me more direct bookings and revenue?" at a
+glance; **Bookings** is the connected detail screen — every reservation
+behind those numbers, with filters, sorting, and fee/stay/guest insights.
 
-First, run the development server:
+Built with Next.js (App Router, React server components), Tailwind CSS v4,
+Motion, and a hosted **Supabase Postgres** the pages actually query.
+
+## Run it
 
 ```bash
+npm install
+cp .env.example .env.local   # fill in your values (see below)
+npm run db:push              # applies supabase/schema.sql
+npm run seed                 # 730 days of deterministic data
+npm run verify               # 47 assertions against the live DB
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`.env.local` needs a Postgres `DATABASE_URL` (Supabase → Connect → Direct
+connection) plus the project's `NEXT_PUBLIC_SUPABASE_URL` and publishable
+key. The app reads only through `DATABASE_URL`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Data model
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Seven tables (`supabase/schema.sql`): `bookings` (every reservation —
+guest, city, channel, referral, attribution, stay dates, value and fee in
+integer cents), `daily_metrics` (730 days of ad views, visits, direct
+bookings and revenue), `monthly_expectations`, `weekly_forecast`,
+`visibility_checks`, `actions` (the work Autumn did each month), and
+`referral_categories`. Dates are `DATE` columns — hotel-local calendar
+days, no timezone arithmetic; money is integer cents everywhere.
 
-## Learn More
+## Seeding
 
-To learn more about Next.js, take a look at the following resources:
+`scripts/seed.ts` is fully deterministic (seeded PRNG, fixed seed): every
+run reproduces the identical database. The data is shaped, not random —
+Stowe seasonality (foliage peak, summer weekends, mud-season trough),
+weekday/weekend rhythm, and a direct-booking share that climbs after
+Autumn's onboarding, which is the story the dashboard exists to tell.
+Prior-year rows are reconstructed so year-over-year comparisons join on
+real data. `scripts/verify-seed.ts` then proves the seed through the same
+query layer the pages use — 47 assertions covering totals, per-channel
+fees, histograms, chart weeks, and per-month coverage.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## How it fetches
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Pages are async server components: they read `?month=` from the URL,
+validate it against the months that exist in the database, and fetch one
+`MonthData` (`src/lib/queries.ts`, typed by `src/lib/contracts.ts`) that
+threads down as props. The month stepper in the nav drives the URL, so
+every screen is shareable and provably database-fed. The trend chart is
+generated at render from the month's weekly series
+(`src/lib/chart-gen.ts`); `/api/report/[month]` streams the month's
+bookings as CSV.
 
-## Deploy on Vercel
+## Decisions worth knowing
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Single property, no auth** — the brief's user is one owner-operator;
+  a login would be surface without substance. RLS is deliberately off:
+  demo data, nothing private.
+- **Native scroll, no chart library** — tables are tools; the chart is
+  hand-generated SVG so its motion, tooltips, and paper texture belong to
+  the design system instead of a library's.
+- **Skeletons only where data lands**, sized to the real layout, with the
+  real headings kept as text.
+- **Reduced motion** is respected across every animation.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## With more time
+
+Campaign-level attribution as a third drill-down, real GA4/ads ingestion
+behind the same `daily_metrics` shape, per-property multi-tenancy (the
+schema is one `property_id` away), and alerting when a week's direct
+share drops below its seasonal band.

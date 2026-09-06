@@ -225,6 +225,8 @@ export const getMonthData = cache(async (month: MonthKey): Promise<MonthData> =>
     rev: w.rev_cents / 100,
     priorBookings: w.prior_bookings,
     priorRev: w.prior_rev_cents / 100,
+    priorAdViews: w.prior_ad_views,
+    priorVisits: w.prior_visits,
   }));
   const expected = expectedRows[0];
   const legend: LegendDatum = {

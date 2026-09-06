@@ -26,6 +26,10 @@ export type WeekDatum = {
   rev: number; // direct revenue, dollars
   priorBookings: number; // same week last year
   priorRev: number;
+  /* prior-year traffic for the chart's ghost curves; optional so older
+     callers keep compiling, always filled by the query layer */
+  priorAdViews?: number;
+  priorVisits?: number;
 };
 
 export type ForecastDatum = { start: string; rev: number };

@@ -1,0 +1,5 @@
+/* The fixed nav overlaps the savings section's screenshot bounds; it is
+   not part of this assertion's visual contract. */
+body > header {
+  visibility: hidden;
+}
