@@ -1,0 +1,340 @@
+/* The chart, ported from the prototype (dash.css / refine.css /
+   overview-preview.css) and scoped under .chart-port. The prototype's stage
+   radios become .mode-revenue / .mode-booked on the wrapper, and its outer
+   panel (border, background, padding) is dropped. */
+
+.chart-port { position: relative; margin-top: 12px; }
+.chart-port .chart-plot > svg { display: block; width: 100%; height: var(--plot-height); overflow: visible; }
+.chart-port .chart-plot svg text { font-family: var(--font-sans); }
+.chart-port .bars-unit { display: none; }
+
+.chart-port .chart-scroll { overflow: visible; }
+.chart-port .chart-scroll:focus { outline: none; }
+.chart-port .chart-scroll:focus-visible { outline: 1px solid var(--ink-56); outline-offset: 4px; }
+.chart-port .chart-inner { position: relative; min-width: 0; --plot-height: 282px; margin-top: calc(20px - var(--plot-height) * 34 / 258); }
+
+.chart-port .plot-backdrop { position: absolute; top: calc(var(--plot-height) * 34 / 258); bottom: 0; left: 0; right: 36px; overflow: hidden; }
+/* light paper segments on the gray page, instead of the usual dark-on-light */
+.chart-port .month-band { position: absolute; top: 0; bottom: 0; background: var(--paper-2); }
+.chart-port .month-band.is-selected { background: var(--hairline-2); }
+.chart-port .month-band.is-forecast { background: repeating-linear-gradient(135deg, transparent 0 5px, var(--hairline-2) 5px 6px); }
+
+.chart-port .chart-plot { position: relative; padding-right: 36px; }
+.chart-port .chart-annotations { position: absolute; inset: 0 36px 0 0; pointer-events: none; }
+
+.chart-port .chart-axis { position: absolute; inset: 0 0 0 auto; width: 28px; font: 500 var(--text-micro, 10px)/14px var(--font-sans); color: var(--ink-56); }
+.chart-port .chart-axis span { position: absolute; left: 0; transform: translateY(-50%); white-space: nowrap; }
+
+.chart-port .months { position: relative; height: 38px; margin-top: -18px; margin-right: 36px; font: 500 var(--text-micro, 10px)/14px var(--font-sans); color: var(--ink-56); }
+.chart-port .months > span { position: absolute; top: 0; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 2px; height: 38px; padding: 5px 5px 8px; white-space: nowrap; }
+/* the year sits under its month instead of beside it */
+.chart-port .month-year { font-size: 0.625rem; line-height: 0.6875rem; color: color(display-p3 0.145 0.112 0.078 / 0.5); }
+.chart-port .months .is-now { color: var(--ink); }
+.chart-port .months .is-next { left: auto !important; right: 0; color: var(--ink-56); }
+
+/* series and marks */
+.chart-port .band { fill: var(--ink-5); }
+.chart-port .hatch-line { stroke: var(--ink-16); stroke-width: 0.75; }
+/* one carrier series stays visible; its paths morph between metrics */
+.chart-port .series { opacity: 0; pointer-events: none; }
+.chart-port .series.s-revenue { opacity: 1; pointer-events: auto; }
+.chart-port .s-revenue path { transition: d 550ms var(--ease); }
+.chart-port .line {
+  fill: none; stroke: var(--accent); stroke-width: 1.75;
+  stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke;
+  /* the path starts at the first week's center (x=8.2); stretch it, anchored
+     at its end, so it meets the left edge */
+  transform-box: fill-box;
+  transform-origin: 100% 50%;
+  transform: scaleX(1.00906);
+}
+.chart-port .fore {
+  fill: none; stroke: var(--accent-64); stroke-width: 1.75; stroke-dasharray: 4 4;
+  stroke-linecap: round; vector-effect: non-scaling-stroke;
+  /* the generated path stops at x=991.8 of 1000; stretch it, anchored at its
+     start, so the projection reaches the end of the forecast band */
+  transform-box: fill-box;
+  transform-origin: 0 50%;
+  transform: scaleX(1.105);
+}
+/* decorative mark, exempt from the AA-bumped text tiers */
+.chart-port .ghost {
+  fill: none; stroke: color(display-p3 0.145 0.112 0.078 / 0.4); stroke-width: 1.3;
+  stroke-dasharray: 4 4; stroke-linecap: round; vector-effect: non-scaling-stroke;
+  /* the generated path spans x=8.2-934.2 of 1000; stretch it to cover the
+     full 0-1000 so it meets both edges */
+  transform-box: fill-box;
+  transform-origin: 0 50%;
+  transform: translateX(-8.2px) scaleX(1.0799);
+}
+/* the static peak annotation is redundant next to the hover tooltips */
+.chart-port .peak { display: none; }
+.chart-port .bar { fill: var(--ink-16); transform-box: fill-box; transform-origin: 50% 100%; transform: scaleY(0.5); transition: fill 200ms ease; }
+.chart-port .bar.is-lit { fill: #fff; }
+.chart-port .bars-base { stroke: var(--hairline); stroke-width: 0.75; }
+.chart-port .now-dot, .chart-port .action-dot { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); transform: translate(-50%, -50%); }
+.chart-port .action-dot { opacity: 0; }
+.chart-port .action-dot.is-planned { background: var(--paper-2); border: 1px solid var(--accent); }
+.chart-port .mark-tick { stroke: var(--ink-56); stroke-width: 1.5; stroke-linecap: round; }
+.chart-port .mark-dot { fill: var(--ink-56); }
+.chart-port .mark-next .mark-tick { stroke: color(display-p3 0.145 0.112 0.078 / 0.4); stroke-dasharray: 1.5 2; }
+.chart-port .mark-next .mark-dot { fill: var(--paper); stroke: color(display-p3 0.145 0.112 0.078 / 0.4); stroke-width: 1; }
+.chart-port .mark-hit { fill: transparent; }
+/* hotspots cover the full plot height, so the ruler lights up even when
+   hovering the line's peaks near the top */
+.chart-port .hr { fill: transparent; y: 0; height: 236px; }
+
+/* the svg's own tooltip boxes stay off; only the guide line survives, as the
+   hover ruler from the top of the graph area down to the bars */
+.chart-port .chart-plot svg .mark-label { display: none; }
+.chart-port .chart-plot svg .tip { opacity: 1; pointer-events: none; }
+.chart-port .chart-plot svg .tip .tip-box,
+.chart-port .chart-plot svg .tip .tip-t { display: none; }
+.chart-port .chart-plot svg .tip-guide {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+  stroke-linecap: round;
+  opacity: 0;
+  transition: opacity 120ms ease;
+  /* the generated line runs to the bars' baseline; end it at the bar tops */
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  transform: scaleY(0.95);
+  /* the ruler dissolves at both ends */
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 10%,
+    black 90%,
+    transparent
+  );
+}
+
+/* the ported per-week tooltips are replaced by the single live one */
+.chart-port .chart-tip[id^="week-tip-"] { display: none; }
+.chart-port .chart-tip.is-live {
+  pointer-events: none;
+  transition:
+    left 180ms var(--ease),
+    opacity 140ms ease;
+}
+
+/* the HTML tooltip, restyled to the approved design */
+.chart-port .chart-tip {
+  position: absolute;
+  top: 6px;
+  left: clamp(0px, calc(var(--anchor) - 60px), calc(100% - 210px));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: max-content;
+  /* top is 3px shy of the bottom: the label's line-height leading pads the
+     first row invisibly, while the button's border cuts a crisp bottom edge */
+  padding: 5px 12px 8px;
+  background: color(display-p3 0.05 0.05 0.05 / 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: var(--rule-w, 1px) solid rgb(255 255 255 / 0.12);
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.18);
+  color: rgb(255 255 255 / 0.95);
+  font: 500 12px/16px var(--font-sans);
+  white-space: nowrap;
+  opacity: 0;
+  z-index: 5;
+}
+.chart-port .chart-tip strong { font: 500 10px/14px var(--font-sans); color: rgb(255 255 255 / 0.62); }
+.chart-port .chart-tip small { font: 500 10px/14px var(--font-sans); color: rgb(255 255 255 / 0.62); }
+/* the tooltip's affordance chip: the whole bin is the click target */
+.chart-port .chart-tip .tip-btn {
+  align-self: flex-start;
+  margin-top: 3px;
+  padding: 3px 8px;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 4px;
+  font: 500 10px/14px var(--font-sans);
+  color: rgb(255 255 255 / 0.85);
+  background: none;
+  pointer-events: auto;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease;
+}
+/* touch: the tooltip's type steps up to the touch floors and its button
+   grows into a real tap target */
+@media (max-width: 1000px) {
+  .chart-port .chart-tip {
+    font: 500 14px/19px var(--font-sans);
+    gap: 5px;
+    padding: 7px 14px 10px;
+  }
+  .chart-port .chart-tip strong,
+  .chart-port .chart-tip small {
+    font: 500 12px/16px var(--font-sans);
+  }
+  .chart-port .chart-tip .tip-btn {
+    font: 500 12px/16px var(--font-sans);
+    padding: 6px 10px;
+    margin-top: 4px;
+  }
+}
+
+.chart-port .chart-tip .tip-btn:hover,
+.chart-port .chart-tip .tip-btn:active {
+  background: rgb(255 255 255 / 0.12);
+  border-color: rgb(255 255 255 / 0.34);
+  color: #fff;
+}
+
+.chart-port .action-tip {
+  top: auto;
+  bottom: 37px;
+  left: clamp(0px, calc(var(--anchor) - 110px), calc(100% - 220px));
+  width: 220px;
+  white-space: normal;
+}
+
+/* unit switching (the prototype's stage radios, as mode classes) */
+.chart-port .focus-unit { display: none; }
+.chart-port.mode-seen .unit-seen,
+.chart-port.mode-visited .unit-visited,
+.chart-port.mode-revenue .unit-revenue,
+.chart-port.mode-booked .unit-booked { display: inline; }
+
+/* The dialog itself never scrolls; the table region inside does. It stays
+   the UA's display:block — an [open]-gated flex column snaps to row the
+   moment close() drops the attribute, reflowing mid-exit while the
+   discrete display transition holds the dialog visible. */
+.figures-dialog {
+  max-height: calc(100dvh - 64px);
+  overflow: hidden;
+}
+
+/* the figures dialog emerges and leaves with scale + fade + blur */
+.figures-dialog {
+  opacity: 0;
+  transform: translateY(6px) scale(0.97);
+  filter: blur(6px);
+  transition:
+    opacity 200ms var(--ease),
+    transform 200ms var(--ease),
+    filter 200ms var(--ease),
+    overlay 200ms allow-discrete,
+    display 200ms allow-discrete;
+}
+.figures-dialog[open] {
+  opacity: 1;
+  transform: none;
+  filter: blur(0);
+}
+@starting-style {
+  .figures-dialog[open] {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+    filter: blur(6px);
+  }
+}
+.figures-dialog::backdrop {
+  background: rgb(0 0 0 / 0);
+  transition:
+    background 200ms ease,
+    overlay 200ms allow-discrete,
+    display 200ms allow-discrete;
+}
+.figures-dialog[open]::backdrop {
+  background: rgb(0 0 0 / 0.38);
+}
+@starting-style {
+  .figures-dialog[open]::backdrop {
+    background: rgb(0 0 0 / 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-port .series, .chart-port .bar, .chart-port .tip-guide { transition: none; }
+}
+
+/* the row a clicked bar points at flashes, then keeps a resting tint for
+   as long as the dialog stays open */
+.figures-dialog .row-hl {
+  background: var(--accent-8);
+  animation: row-flash 1.2s var(--ease);
+}
+@keyframes row-flash {
+  0%,
+  30% {
+    background: color(display-p3 0.315 0.545 0.92 / 20%);
+  }
+  100% {
+    background: var(--accent-8);
+  }
+}
+
+/* no rubber-banding at the table's ends: the sticky header would ride the
+   bounce, and the page behind must not scroll when the table runs out */
+.figures-dialog .square-scroll {
+  overscroll-behavior: none;
+}
+
+/* mobile: the scroll lane collapses — the scrollbar must not shape the
+   dialog's internal padding, so the right inset matches the left (pl-4) */
+@media (max-width: 600px) {
+  .figures-dialog .square-scroll {
+    padding-right: 1rem;
+  }
+}
+
+/* a popup's scroll region shows its lane whenever it overflows — the
+   hover-gated fading thumb is the page columns' behavior, not a dialog's */
+.figures-dialog .square-scroll {
+  --scroll-thumb: var(--ink-16);
+}
+
+/* the popup's scroll lane tightens so the content's right inset matches
+   its 20px left margin (12px gap + 6px bar + 2px dialog padding) */
+.figures-dialog .square-scroll {
+  padding-right: 12px;
+}
+
+/* Inside the popup's scroll region a touch halo may hang below the last
+   element, and its 12px would read as scrollable overflow — a popup that
+   fits would still grow a scrollbar. The bottom leg of the halo goes; the
+   top and sides keep the reach (start-edge overflow never scrolls). */
+.figures-dialog .square-scroll .touch-hit::after {
+  bottom: 0;
+}
+
+/* the popup header's shadow only stands once content has scrolled under
+   it — at rest, or with nothing to scroll, there is nothing to dissolve */
+.dialog-top-fade {
+  opacity: 0;
+}
+.square-scroll.off-start + .dialog-top-fade {
+  opacity: 1;
+}
+
+/* the figures table header pins to the top of the scroll region; rows fade
+   out under it via a paper gradient */
+.figures-dialog thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--paper);
+}
+.figures-dialog thead th::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 12px;
+  background: linear-gradient(var(--paper), transparent);
+  pointer-events: none;
+}
+
+/* the bottom fade withdraws once the table is scrolled to its end */
+.square-scroll.at-end + .figures-fade {
+  opacity: 0;
+}

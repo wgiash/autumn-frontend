@@ -1,0 +1,424 @@
+@import "tailwindcss";
+@import "./chart.css";
+
+@property --scroll-thumb {
+  syntax: "<color>";
+  /* scrollbar pseudo-elements only see this through inheritance */
+  inherits: true;
+  initial-value: transparent;
+}
+
+/* Autumn tokens, ported from the prototype (autumn-tokens.css).
+   The design is committed to one light, paper look. */
+:root {
+  --weight-light: 300;
+  --text-wordmark: 20px;
+  --leading-wordmark: 24px;
+  --height-wordmark: 27px;
+  --nav-h: 60px;
+  --rule-w: 0.5px;
+  --paper: #ececec;
+  --paper-2: color(display-p3 0.955 0.955 0.955 / 0.92);
+  --white-glass: rgb(255 255 255 / 0.8);
+  --ink: color(display-p3 0.05 0.05 0.05);
+  /* The three text tiers keep the prototype's names but sit higher than
+     their names say: 66% is the WCAG AA floor on these backgrounds, and the
+     other two step up from it so every tier passes 4.5:1. */
+  --ink-72: color(display-p3 0.145 0.112 0.078 / 82%);
+  --ink-56: color(display-p3 0.145 0.112 0.078 / 72%);
+  --ink-40: color(display-p3 0.145 0.112 0.078 / 66%);
+  --ink-16: color(display-p3 0.145 0.112 0.078 / 16%);
+  --ink-5: color(display-p3 0.145 0.112 0.078 / 5%);
+  --hairline: color(display-p3 0.145 0.112 0.078 / 14%);
+  --hairline-2: color(display-p3 0.145 0.112 0.078 / 8%);
+  --accent: color(display-p3 0.315 0.545 0.92);
+  --accent-64: color(display-p3 0.315 0.545 0.92 / 64%);
+  --accent-8: color(display-p3 0.315 0.545 0.92 / 8%);
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* cap on the main content column; the rail stays pinned to the right
+     margin and the column centers in the space that remains */
+  --max: 880px;
+  --margin: 32px;
+  --rail: 308px;
+}
+
+/* Large desktop (external monitors): the whole rem scale steps up 10% —
+   type, spacing and padding move together, so proportions match the laptop
+   look exactly. The px layout tokens step with it; hairlines and the
+   24px+6px scrollbar lane stay 1:1 by design. */
+@media (min-width: 1600px) {
+  :root {
+    font-size: 110%;
+    --margin: 36px;
+    --rail: 340px;
+    --max: 968px;
+    --nav-h: 66px;
+  }
+}
+
+/* Touch (the single-column range): the rem scale steps up ~6% so spacing,
+   padding, icons and hit areas grow with the type, and the type tokens pin
+   to exact px so nothing double-scales — meta 12, small UI 13, body 15,
+   while section heads, stats and the display hold the laptop hierarchy. */
+@media (max-width: 1000px) {
+  :root {
+    font-size: 106.25%;
+    --text-2xs: 12px;
+    --text-xs: 13px;
+    --text-sm: 15px;
+    --text-base: 16px;
+    --text-2xl: 24px;
+    --text-display: 32px;
+  }
+}
+
+/* the side margin narrows on phones, and the display size steps down a
+   notch; everything derives from the tokens */
+@media (max-width: 600px) {
+  :root {
+    --margin: 20px;
+    --text-display: 30px;
+  }
+}
+@media (max-width: 380px) {
+  :root {
+    --margin: 16px;
+  }
+}
+
+/* the two custom type tiers: plain @theme (not inline) so utilities
+   reference the vars and the touch breakpoints below can retune them */
+@theme {
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 0.875rem;
+  --text-display: 2rem;
+  --text-display--line-height: 2.25rem;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-white-glass: var(--white-glass);
+  --color-ink: var(--ink);
+  --color-ink-72: var(--ink-72);
+  --color-ink-56: var(--ink-56);
+  --color-ink-40: var(--ink-40);
+  --color-ink-16: var(--ink-16);
+  --color-ink-5: var(--ink-5);
+  --color-hairline: var(--hairline);
+  --color-hairline-2: var(--hairline-2);
+  --color-accent: var(--accent);
+  --font-display: var(--font-arizona), Georgia, serif;
+  --font-sans: var(--font-hnd), Helvetica, system-ui, sans-serif;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-hnd), Helvetica, system-ui, sans-serif;
+}
+
+/* Square scrollbars, no rounding anywhere — the app-wide floor. Regions
+   with their own lane styling (.square-scroll, .menu-in) override it. */
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--ink-16);
+  border-radius: 0;
+}
+
+/* under a modal's backdrop the nav's blur veil reads as a stray glow
+   band, so it steps aside while any dialog is open */
+body:has(dialog[open]) .nav-veil {
+  opacity: 0;
+}
+
+/* the nav goes solid while a pinned table header connects beneath it */
+[data-nav-solid] .nav-solid-fill {
+  opacity: 1;
+}
+
+/* Skeleton loaders: blocks of the house glass white breathing in opacity
+   toward the paper ground and back. In the components layer so a utility
+   can retone the base on other surfaces. */
+@layer components {
+  .skeleton {
+    border-radius: 4px;
+    background: var(--white-glass);
+    animation: skeleton-pulse 1.8s ease-in-out infinite;
+  }
+}
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* the context menu emerges in place: blur resolving as it scales from
+   its own center — no directional slide */
+.menu-in {
+  animation: menu-in 140ms var(--ease);
+  /* Past its max height the panel scrolls: a square lane pinned to the
+     right edge, its track running the full height of the glass, and the
+     items give up that sliver of width. Webkit-only on purpose —
+     scrollbar-width/color would make Chrome ignore the square styling. */
+}
+.menu-in::-webkit-scrollbar {
+  width: 6px;
+}
+.menu-in::-webkit-scrollbar-track {
+  background: transparent;
+}
+.menu-in::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 0.28);
+  border-radius: 0;
+}
+/* leaving is a plain fade — the entrance must not restart over it */
+.menu-out {
+  animation: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms var(--ease);
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+    filter: blur(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-in {
+    animation: none;
+  }
+}
+
+/* the arriving screen fades in over the skeleton that held its place */
+.page-fade {
+  animation: page-fade-in 240ms var(--ease);
+}
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .page-fade {
+    animation: none;
+  }
+}
+
+/* Every expand/collapse animates its height change. */
+:root {
+  interpolate-size: allow-keywords;
+}
+details::details-content {
+  block-size: 0;
+  overflow-y: clip;
+  opacity: 0;
+  transition:
+    block-size 300ms var(--ease),
+    opacity 300ms var(--ease),
+    content-visibility 300ms allow-discrete;
+}
+details[open]::details-content {
+  block-size: auto;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  details::details-content {
+    transition: none;
+  }
+}
+
+/* App scroll regions: square scrollbars, no rounding anywhere, and the
+   scrollbar's lane always reserved so a region never changes width when
+   its content starts to overflow. */
+@layer components {
+  .square-scroll {
+    overflow-y: auto;
+    scrollbar-gutter: stable;
+    padding-right: 24px;
+  }
+  .square-scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+  .square-scroll::-webkit-scrollbar-track {
+    background: transparent;
+    /* the track starts at the top edge of the region's first item (the
+       columns' pt-29); the content above it scrolls under the nav blur */
+    margin-top: var(--scroll-inset-top, 7.25rem);
+  }
+  /* The thumb shows only while the pointer is over the region or the region
+     is actively scrolling (.is-scrolling comes from ScrollVisibility), and it
+     fades: scrollbar pseudo-elements can't transition, but a registered
+     custom property can, and the thumb inherits it every frame. */
+  .square-scroll {
+    --scroll-thumb: transparent;
+    transition: --scroll-thumb 400ms ease;
+  }
+  .square-scroll:hover,
+  .square-scroll.is-scrolling {
+    --scroll-thumb: var(--ink-16);
+  }
+  .square-scroll::-webkit-scrollbar-thumb {
+    background: var(--scroll-thumb);
+    border-radius: 0;
+  }
+  .square-scroll::-webkit-scrollbar-thumb:hover {
+    background: color(display-p3 0.145 0.112 0.078 / 0.4);
+  }
+}
+
+/* Below the two-column layout the content column is the page itself: its
+   classic scrollbar would widen the right margin by its 6px lane, so it
+   hides, the way a phone's overlay scrollbar takes no space. */
+@media (max-width: 1000px) {
+  main > .square-scroll {
+    scrollbar-width: none;
+  }
+  main > .square-scroll::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Horizontal variant of the scroll regions (mobile/tablet card rows). */
+@layer components {
+  .square-scroll-x {
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+    /* a docked item stops at the margin edge, not under the edge fade */
+    scroll-padding-inline: var(--margin);
+  }
+  .square-scroll-x::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Containerless text buttons (Take action, Download report, expanders):
+   an invisible halo lifts their touch target toward 44px on touch layouts
+   without changing how they look. */
+@layer components {
+  @media (max-width: 1000px) {
+    .touch-hit {
+      position: relative;
+    }
+    .touch-hit::after {
+      content: "";
+      position: absolute;
+      inset: -12px -8px;
+    }
+  }
+}
+
+/* Card-row edge fades: each side's gradient stands while there is more to
+   scroll that way, so a flush-fitting card can't disguise the row as
+   complete. ScrollVisibility maintains the edge tags. */
+@layer components {
+  .carousel-fade {
+    opacity: 1;
+  }
+  .carousel-fade-l {
+    opacity: 0;
+  }
+  .square-scroll-x.at-end ~ .carousel-fade-r,
+  .stage-scroll.at-end ~ .carousel-fade-r {
+    opacity: 0;
+  }
+  .square-scroll-x.off-start ~ .carousel-fade-l,
+  .stage-scroll.off-start ~ .carousel-fade-l {
+    opacity: 1;
+  }
+}
+
+/* Funnel tabs on phones: the stages hug their content — stretch would
+   push the next stage's cut edge out of view — and the row bleeds edge to
+   edge and scrolls when they don't fit. The bleed lives on the wrapper so
+   the edge fades can sit at the bled edges. */
+@layer components {
+  @media (max-width: 600px) {
+    .stage-bleed {
+      margin-inline: calc(-1 * var(--margin));
+    }
+    .stage-scroll {
+      overflow-x: auto;
+      padding-inline: var(--margin);
+      /* a docked stage aligns to the margin edge, not the bled edge */
+      scroll-padding-inline: var(--margin);
+      scrollbar-width: none;
+    }
+    .stage-scroll::-webkit-scrollbar {
+      display: none;
+    }
+  }
+  /* above the breakpoint the row never scrolls; the doubled class outranks
+     the off-start rule so a stale edge tag can't paint a fade */
+  @media (min-width: 601px) {
+    .stage-bleed > .carousel-fade.carousel-fade {
+      opacity: 0;
+    }
+  }
+}
+
+/* Scroll-edge smoothing: content fades into the panel at the top and
+   bottom of an overflowing region - same tone as the surface, no shadow. */
+@layer components {
+  .scroll-shadows-y {
+    /* top smoothing comes from the sticky header's own fade */
+    mask-image: linear-gradient(
+      to bottom,
+      black calc(100% - 18px),
+      transparent
+    );
+  }
+}
+
+/* The nav underline draws in from the left but keeps the browser's own
+   descender gaps: an invisible duplicate label carries a real underline
+   (skip-ink applies to its glyph shapes), and a clip-path reveals it. */
+@layer components {
+  .nav-link {
+    position: relative;
+    padding: 22px 0;
+    color: var(--ink-56);
+    transition: color 200ms ease;
+  }
+  .nav-link:hover,
+  .nav-link:active,
+  .nav-link:focus-visible,
+  .nav-link[aria-current="page"] {
+    color: var(--ink);
+  }
+  .nav-underline {
+    position: absolute;
+    inset: 0;
+    padding: 22px 0;
+    pointer-events: none;
+    color: transparent;
+    text-decoration-line: underline;
+    text-decoration-color: var(--ink);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.08em;
+    text-decoration-skip-ink: auto;
+    clip-path: inset(0 100% 0 0);
+    transition: clip-path 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .nav-link:hover .nav-underline,
+  .nav-link:active .nav-underline,
+  .nav-link:focus-visible .nav-underline {
+    clip-path: inset(0 0 0 0);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-link,
+    .nav-underline {
+      transition: none;
+    }
+  }
+}

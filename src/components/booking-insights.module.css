@@ -1,0 +1,266 @@
+.dialog {
+  width: min(640px, calc(100% - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--ink);
+  letter-spacing: 0;
+}
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 34px);
+}
+
+.header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 24px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.header h2 {
+  margin-top: 6px;
+  font-size: 20px;
+  line-height: 24px;
+  font-weight: 500;
+}
+
+.eyebrow,
+.scope {
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ink-56);
+}
+
+.scope { margin-top: 6px; }
+
+.close {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  margin: -6px -6px 0 0;
+  border-radius: 4px;
+  color: var(--ink-56);
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.close:hover,
+.close:active {
+  color: var(--ink);
+  background: var(--ink-5);
+}
+
+.body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* no scrollbar-width/color here: setting either makes Chrome ignore
+     the ::-webkit-scrollbar styling, and its standard thumb is rounded —
+     the app-wide square webkit rules take over instead */
+  padding: 24px;
+}
+
+.metrics {
+  display: flex;
+  flex-wrap: wrap;
+  background: var(--paper-2);
+  border-radius: var(--radius-sm, 4px);
+  overflow: hidden;
+}
+
+.metrics > div {
+  flex: 1 1 148px;
+  min-width: 0;
+  padding: 16px;
+}
+
+.metrics > div + div { border-left: 1px solid var(--hairline-2); }
+
+.metrics dt {
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+  color: var(--ink-56);
+}
+
+.metrics dd {
+  margin-top: 8px;
+  font-size: 32px;
+  line-height: 36px;
+  font-weight: 300;
+  white-space: nowrap;
+}
+
+.metrics dd span {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  color: var(--ink-56);
+}
+
+.section { margin-top: 24px; }
+
+.section + .section {
+  padding-top: 24px;
+  border-top: 1px solid var(--hairline);
+}
+
+.section h3,
+.guestSection h3 {
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 500;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.sectionHeading > span {
+  flex-shrink: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ink-56);
+}
+
+.table {
+  width: 100%;
+  margin-top: 12px;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 20px;
+}
+
+.table th,
+.table td {
+  padding: 10px 0 10px 16px;
+  text-align: right;
+  vertical-align: top;
+  font-weight: 400;
+}
+
+.table th:first-child {
+  width: 100%;
+  padding-left: 0;
+  text-align: left;
+}
+
+.table thead th {
+  position: static;
+  padding-top: 0;
+  padding-bottom: 8px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ink-56);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* These short tables scroll with their section, not the chart dialog's sticky header. */
+.dialog .table thead th::after { display: none; }
+
+.table tbody tr { border-top: 1px solid var(--hairline-2); }
+.table td { white-space: nowrap; }
+.table td:last-child { font-weight: 500; }
+.table:not(.feeTable) td:nth-child(2) { color: var(--ink-56); }
+.feeTable tbody th, .feeTable td { padding-block: 14px; }
+
+.channelName {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+.channelName i {
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+}
+
+.rowMeta {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--ink-56);
+}
+
+.mobileValue { display: none; }
+
+.disclosure { margin-top: 16px; border-block: 1px solid var(--hairline); }
+
+.disclosure summary svg,
+.moreCities summary svg { flex-shrink: 0; transition: transform 160ms ease; }
+.disclosure[open] > summary svg,
+.moreCities[open] > summary svg { transform: rotate(180deg); }
+
+.disclosure summary:focus-visible,
+.moreCities summary:focus-visible,
+.close:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+.estimate { padding: 4px 0 16px; }
+.estimate dl { font-size: 14px; line-height: 20px; }
+.estimate dl > div { display: flex; justify-content: space-between; gap: 16px; padding-block: 6px; }
+.estimate dt { color: var(--ink-56); }
+.estimate dd { white-space: nowrap; }
+.estimate .receiptTotal { margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--hairline-2); font-weight: 500; }
+.receiptTotal dt { color: var(--ink); }
+
+.note,
+.footnote { color: var(--ink-56); font-size: 12px; line-height: 18px; }
+.note { margin-top: 12px; }
+.footnote { margin-top: 20px; }
+
+.histogram { display: flex; gap: 8px; margin-top: 38px; }
+.bin { flex: 1; min-width: 0; }
+.barTrack { display: flex; align-items: flex-end; height: 100px; border-bottom: 1px solid var(--hairline); }
+.bar { position: relative; width: 100%; background: var(--ink-16); }
+.bar[data-peak="true"] { background: var(--accent); }
+.bar > span { position: absolute; bottom: calc(100% + 6px); left: 0; width: 100%; text-align: center; font-size: 12px; line-height: 18px; color: var(--ink-72); }
+.binLabel { display: block; margin-top: 8px; text-align: center; font-size: 12px; line-height: 18px; color: var(--ink-56); }
+
+.moreCities { border-block: 1px solid var(--hairline); }
+.moreCities .table { margin-top: 4px; margin-bottom: 8px; }
+
+.tabs { display: flex; margin-top: 24px; }
+.tabs button:focus-visible,
+.guestSection:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.guestSection { margin-top: 20px; }
+.guestPanels { overflow: clip; }
+.guestPanelsContent { display: flow-root; }
+
+@media (max-width: 600px) {
+  .header { padding: 20px; }
+  .body { padding: 20px; }
+}
+
+@media (max-width: 480px) {
+  .metrics { display: block; }
+  .metrics > div { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 12px; }
+  .metrics > div + div { border-left: 0; border-top: 1px solid var(--hairline-2); }
+  .metrics dd { margin-top: 0; }
+  .desktopValue { display: none; }
+  .mobileValue { display: inline; }
+  .table th, .table td { padding-left: 12px; }
+  .histogram { gap: 6px; }
+  .sectionHeading { align-items: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog, .close, .disclosure summary svg, .moreCities summary svg { transition: none; }
+}
