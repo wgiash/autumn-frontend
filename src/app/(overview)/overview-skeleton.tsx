@@ -4,8 +4,7 @@ import { Skeleton } from "@/components/skeleton";
 /* The overview's loading state: the chrome is real, skeletons stand only
    where data lands — the outcome figures, the chart, the recent rows and
    the rail's cards. The real screen fades in over it (app/template.tsx). */
-export function OverviewSkeleton({ monthLabel }: { monthLabel?: string }) {
-  const monthName = monthLabel?.split(" ")[0];
+export function OverviewSkeleton() {
   return (
     <main
       aria-busy="true"
@@ -19,12 +18,10 @@ export function OverviewSkeleton({ monthLabel }: { monthLabel?: string }) {
       <div className="square-scroll w-full max-w-(--max) min-w-0 justify-self-center pt-29 pb-30 max-[1000px]:max-w-none max-[1000px]:px-(--margin) max-[1000px]:[scrollbar-gutter:auto]">
         <Greeting name="Don" />
         <h1 className="mt-2 max-w-[40.625rem] font-display text-display/[1.15] font-light tracking-[-0.02em] text-balance">
-          {/* the month is data: named when the page already knows it, a
-              month-shaped shimmer when the route-level fallback doesn't */}
+          {/* the month stays a shimmer while loading; the real page's
+              month word then blur-emerges as the single reveal */}
           Your{" "}
-          {monthName ?? (
-            <Skeleton className="inline-block h-[0.8em] w-[3.2em] translate-y-[0.06em] align-baseline" />
-          )}{" "}
+          <Skeleton className="inline-block h-[0.8em] w-[3.2em] translate-y-[0.06em] align-baseline" />{" "}
           with Autumn.
         </h1>
 

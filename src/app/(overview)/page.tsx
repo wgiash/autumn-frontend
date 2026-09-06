@@ -24,9 +24,8 @@ export default async function Home({
   /* the boundary is keyed by month: stepping months remounts it, so the
      skeleton holds the layout while the new month streams in — loading.tsx
      alone never fires on a same-route searchParams navigation */
-  const monthLabel = months.find((m) => m.value === month)?.label;
   return (
-    <Suspense key={month} fallback={<OverviewSkeleton monthLabel={monthLabel} />}>
+    <Suspense key={month} fallback={<OverviewSkeleton />}>
       <OverviewContent month={month} />
     </Suspense>
   );
