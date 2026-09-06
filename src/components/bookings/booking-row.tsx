@@ -40,7 +40,6 @@ export function BookingRow({
       animate={{
         opacity: softened ? 0.72 : 1,
         filter: softened ? "blur(2.5px)" : "blur(0px)",
-        scale: softened ? 0.98 : 1,
       }}
       /* popLayout lifts the exiting row out of flow, so it blurs away in
          place while the surviving rows glide on transforms alone — no
