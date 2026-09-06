@@ -179,8 +179,8 @@ export function BookingTable({
           <AnimatePresence initial={false} mode="popLayout">
             {visible.map((b) => {
               const isNew = !rowSnapshot.previousIds.has(b.id);
-              const delay = isNew ? Math.min(newIndex++ * 0.03, 0.3) : 0;
-              return <BookingRow key={b.id} b={b} enterDelay={delay} />;
+              const index = isNew ? newIndex++ : 0;
+              return <BookingRow key={b.id} b={b} enterIndex={index} />;
             })}
           </AnimatePresence>
         )}

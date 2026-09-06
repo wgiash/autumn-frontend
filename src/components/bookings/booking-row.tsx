@@ -21,10 +21,12 @@ export const ROW =
       filtered out folds away; appended rows fade in on their stagger ── */
 export function BookingRow({
   b,
-  enterDelay = 0,
+  enterIndex = 0,
 }: {
   b: Booking;
-  enterDelay?: number;
+  /* position within the batch this row mounted with — drives the CSS
+     entrance cascade's stagger */
+  enterIndex?: number;
 }) {
   const reduce = useReducedMotion();
   /* while a sort or filter glides the row to a new position it softens —
@@ -36,7 +38,10 @@ export function BookingRow({
       layout={reduce ? false : "position"}
       onLayoutAnimationStart={() => setMoving(true)}
       onLayoutAnimationComplete={() => setMoving(false)}
-      initial={reduce ? false : { opacity: 0, filter: "blur(4px)" }}
+      /* the entrance is the CSS .row-in cascade, not motion, so it runs
+         from first paint with no hydration seam */
+      initial={false}
+      style={{ "--row-i": enterIndex } as React.CSSProperties}
       animate={{
         opacity: softened ? 0.72 : 1,
         filter: softened ? "blur(2.5px)" : "blur(0px)",
@@ -55,10 +60,10 @@ export function BookingRow({
       }
       transition={{
         layout: { duration: 0.3, ease: EASE },
-        opacity: { duration: 0.22, ease: EASE, delay: enterDelay },
-        filter: { duration: 0.22, ease: EASE, delay: enterDelay },
+        opacity: { duration: 0.22, ease: EASE },
+        filter: { duration: 0.22, ease: EASE },
       }}
-      className="group/bk mb-1.5 rounded border border-transparent bg-paper-2 transition-colors duration-200 open:border-hairline open:bg-white">
+      className="group/bk row-in mb-1.5 rounded border border-transparent bg-paper-2 transition-colors duration-200 open:border-hairline open:bg-white">
       <summary
         /* padding backs out the card's 1px border so the columns land
            exactly on the header row's tracks */

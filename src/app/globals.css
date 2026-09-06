@@ -198,6 +198,26 @@ body:has(dialog[open]) .nav-veil {
   }
 }
 
+/* Booking rows blur-emerge in a short cascade whenever they mount — after
+   the skeleton on load and month switches, and again for appended pages.
+   Pure CSS like the month word: it starts with first paint, so hydration
+   can't stutter it; `both` holds each row hidden until its turn. */
+.row-in {
+  animation: row-in 320ms var(--ease) both;
+  animation-delay: calc(min(var(--row-i, 0) * 30ms, 300ms));
+}
+@keyframes row-in {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .row-in {
+    animation: none;
+  }
+}
+
 /* The hero's month name blur-emerges in place; `both` keeps it hidden
    through the small delay. will-change lifts the span onto its own
    compositor layer so the tween keeps rendering while the main thread is
