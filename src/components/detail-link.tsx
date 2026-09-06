@@ -15,10 +15,10 @@ export function DetailLink({
   return (
     <Link
       href={href}
-      className={`touch-hit inline-flex items-center gap-1.5 text-xs/4 font-medium whitespace-nowrap underline decoration-1 underline-offset-[0.08em] transition-[color,opacity] max-[1000px]:text-sm/5 ${
+      className={`touch-hit inline-flex items-center gap-1.5 text-xs/4 font-medium whitespace-nowrap underline decoration-1 underline-offset-[0.08em] outline-none transition-[color,opacity] max-[1000px]:text-sm/5 ${
         accent
-          ? "text-accent hover:opacity-75 active:opacity-75"
-          : "text-ink-56 hover:text-ink active:text-ink"
+          ? "text-accent hover:opacity-75 focus-visible:opacity-75 active:opacity-75"
+          : "text-ink-56 hover:text-ink focus-visible:text-ink active:text-ink"
       }`}
     >
       {children} <ArrowUpRight size={12} />

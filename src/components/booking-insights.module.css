@@ -52,10 +52,12 @@
   border-radius: 4px;
   color: var(--ink-56);
   cursor: pointer;
+  outline: none;
   transition: background 160ms ease, color 160ms ease;
 }
 
 .close:hover,
+.close:focus-visible,
 .close:active {
   color: var(--ink);
   background: var(--ink-5);
@@ -210,8 +212,7 @@
 .moreCities[open] > summary svg { transform: rotate(180deg); }
 
 .disclosure summary:focus-visible,
-.moreCities summary:focus-visible,
-.close:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.moreCities summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 .estimate { padding: 4px 0 16px; }
 .estimate dl { font-size: 14px; line-height: 20px; }
