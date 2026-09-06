@@ -1,42 +1,6 @@
+import type { Booking } from "@/components/bookings/model";
 import { DetailLink } from "@/components/detail-link";
-
-type Booking = {
-  guest: string;
-  source: string;
-  direct?: boolean;
-  stay: string;
-  stayDetail: string;
-  booked: string;
-  amount: string;
-};
-
-const BOOKINGS: Booking[] = [
-  {
-    guest: "Morgan L.",
-    source: "Expedia",
-    stay: "Sep 21–24",
-    stayDetail: "3 nights · Meadow Room",
-    booked: "Aug 31",
-    amount: "$672",
-  },
-  {
-    guest: "Henry A.",
-    source: "Your website",
-    direct: true,
-    stay: "Oct 12–14",
-    stayDetail: "2 nights · Meadow Room",
-    booked: "Aug 29",
-    amount: "$503",
-  },
-  {
-    guest: "Jamie S.",
-    source: "Expedia",
-    stay: "Sep 16–18",
-    stayDetail: "2 nights · Lantern Suite",
-    booked: "Aug 29",
-    amount: "$448",
-  },
-];
+import { money } from "@/components/bookings/format";
 
 /* phones: the middle columns fold into the two outer cells */
 const COLUMNS =
@@ -56,7 +20,13 @@ export function tone(name: string) {
   return TONES[h % TONES.length];
 }
 
-export function RecentBookings() {
+export function RecentBookings({ bookings }: { bookings: Booking[] }) {
+  /* the three most recently made reservations; the stable sort keeps the
+     month's own order for same-day ties */
+  const recent = [...bookings]
+    .sort((a, b) => b.booked.localeCompare(a.booked))
+    .slice(0, 3);
+
   return (
     <section aria-labelledby="recent-title" className="mt-6 pb-2">
       <div className="mb-4 flex items-baseline justify-between gap-4">
@@ -77,8 +47,8 @@ export function RecentBookings() {
       </div>
 
       <div>
-        {BOOKINGS.map((b) => (
-          <div key={b.guest} className={`${COLUMNS} border-b border-hairline-2 py-3`}>
+        {recent.map((b) => (
+          <div key={b.id} className={`${COLUMNS} border-b border-hairline-2 py-3`}>
             <div className="flex min-w-0 items-center gap-2.5">
               <span
                 aria-hidden="true"
@@ -90,32 +60,35 @@ export function RecentBookings() {
                   {b.guest}
                 </span>
                 <span className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs/4 text-ink-56">
-                  {b.direct && (
+                  {b.channel === "Your website" && (
                     <span
                       aria-hidden="true"
                       className="size-1.5 shrink-0 bg-accent"
                     />
                   )}
                   <span className="truncate">
-                    {b.source}
-                    <span className="hidden max-[600px]:inline"> · {b.stay}</span>
+                    {b.channel}
+                    <span className="hidden max-[600px]:inline">
+                      {" "}
+                      · {b.stayLabel}
+                    </span>
                   </span>
                 </span>
               </span>
             </div>
             <div className="min-w-0 max-[600px]:hidden">
-              <span className="block text-sm/4.5">{b.stay}</span>
+              <span className="block text-sm/4.5">{b.stayLabel}</span>
               <span className="mt-0.5 block truncate text-xs/4 text-ink-56">
-                {b.stayDetail}
+                {b.nights} night{b.nights === 1 ? "" : "s"} · {b.room}
               </span>
             </div>
             <div className="text-sm/4.5 text-ink-72 max-[600px]:hidden">
-              {b.booked}
+              {b.bookedLabel}
             </div>
             <div className="text-right text-sm/4.5 font-medium">
-              {b.amount}
+              {money(b.value)}
               <span className="mt-0.5 hidden text-xs/4 font-normal text-ink-56 max-[600px]:block">
-                {b.booked}
+                {b.bookedLabel}
               </span>
             </div>
           </div>

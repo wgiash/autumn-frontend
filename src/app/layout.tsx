@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import localFont from "next/font/local";
+import { getAvailableMonths } from "@/lib/queries";
 import { SiteNav } from "@/components/site-nav";
 import { ScrollVisibility } from "@/components/scroll-visibility";
 import "./globals.css";
@@ -26,14 +28,20 @@ export const metadata: Metadata = {
   description: "Frontend build of the Autumn overview",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const months = await getAvailableMonths();
   return (
     <html
       lang="en"
       className={`${arizona.variable} ${helveticaNow.variable} h-full antialiased`}
     >
       <body className="h-dvh overflow-hidden bg-paper font-sans text-ink">
-        <SiteNav />
+        {/* useSearchParams inside the nav needs a Suspense boundary under a
+            server layout; the fallback stays empty for the blink before the
+            month is known */}
+        <Suspense fallback={null}>
+          <SiteNav months={months} />
+        </Suspense>
         <ScrollVisibility />
         {children}
       </body>

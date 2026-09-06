@@ -1,36 +1,20 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { motion } from "motion/react";
+import type { MonthOption } from "@/lib/contracts";
 import { Download } from "@/components/icons";
 import { MonthStepper } from "@/components/month-stepper";
 import { ProgressiveBlur } from "@/components/ui/progressive-blur";
 
-const EASE = [0.22, 0.61, 0.36, 1] as const;
+import { EASE } from "@/components/ui/motion";
+import { Leaf } from "@/components/leaf";
 
 const LINKS = [
   { href: "/", label: "Overview" },
   { href: "/bookings", label: "Bookings" },
 ] as const;
-
-function Leaf() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 14 12.5"
-      width="0.875rem"
-      height="0.78125rem"
-      aria-hidden="true"
-      className="shrink-0"
-    >
-      <path
-        d="M0.563 12.5L0.563 9.505 6.981 4.9 0.443 8.067C0.197 7.652 0.136 6.896 0.136 6.568 0.429 2.93 2.783 1.216 3.923 0.811 6.66-0.432 11.461 0.025 13.514 0.409 14.052 2.989 11.58 4.554 10.277 5.016L12.781 5.016C12.539 6.903 9.951 7.835 8.689 8.067L11.377 8.067C10.741 9.309 9.403 10.234 8.81 10.543 6.709 11.878 3.454 11.368 2.09 10.943L2.09 12.5Z"
-        fill="currentColor"
-      />
-    </svg>
-  );
-}
 
 /* the homepage's hamburger, ported 1:1 — the outer lines fold into an X,
    the middle one dissolves */
@@ -69,9 +53,31 @@ function Burger({ open }: { open: boolean }) {
   );
 }
 
-export function SiteNav() {
+export function SiteNav({ months }: { months: MonthOption[] }) {
   const pathname = usePathname();
+  /* the report month lives in the URL; anything unknown means the latest */
+  const raw = useSearchParams().get("month");
+  const selected = months.some((m) => m.value === raw)
+    ? (raw as MonthOption["value"])
+    : months[months.length - 1].value;
+  const monthName = months
+    .find((m) => m.value === selected)!
+    .label.split(" ")[0];
   const [menuOpen, setMenuOpen] = useState(false);
+  const burgerRef = useRef<HTMLButtonElement>(null);
+
+  /* Escape closes the sheet and hands focus back to the burger */
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+        burgerRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [menuOpen]);
 
   return (
     /* the header's box extends past the nav row (the pb is blur zone), so
@@ -115,23 +121,23 @@ export function SiteNav() {
               aria-current={pathname === href ? "page" : undefined}
               /* the divider is its own layer so the wash's radius can't
                  curl its ends — it stays a square-ended straight rule */
-              className="relative py-[1.125rem] text-[1.0625rem]/[1.375rem] font-normal tracking-[-0.01em] text-white active:bg-white/10 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-[rgb(255_255_255/0.16)]"
+              className="relative py-[1.125rem] text-[1.0625rem]/[1.375rem] font-normal tracking-[-0.01em] text-white outline-none focus-visible:bg-white/10 active:bg-white/10 after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-[rgb(255_255_255/0.16)]"
             >
               {label}
             </Link>
           ))}
           {/* pinned bottom, like the homepage sheet's CTA row */}
           <a
-            href="/report-august.csv"
+            href={`/api/report/${selected}`}
             download
             onClick={() => setMenuOpen(false)}
-            className="mt-auto flex items-center justify-between rounded-lg border-[0.5px] border-white/20 px-3.5 py-3 text-sm/5 font-medium text-white transition-colors duration-200 hover:border-white/35 hover:bg-white/10 active:bg-white/10 active:transition-none"
+            className="mt-auto flex items-center justify-between rounded-lg border-[0.5px] border-white/20 px-3.5 py-3 text-sm/5 font-medium text-white outline-none transition-colors duration-200 hover:border-white/35 hover:bg-white/10 focus-visible:border-white/35 focus-visible:bg-white/10 active:bg-white/10 active:transition-none"
           >
-            Download August report
+            Download {monthName} report
             <Download size={14} />
           </a>
           <div className="mt-9 flex justify-center">
-            <MonthStepper onDark />
+            <MonthStepper months={months} selected={selected} onDark />
           </div>
         </nav>
       )}
@@ -156,7 +162,7 @@ export function SiteNav() {
               key={href}
               href={href}
               aria-current={pathname === href ? "page" : undefined}
-              className="nav-link text-sm/4 font-medium"
+              className="nav-link text-sm/4 font-medium outline-none"
             >
               <span className="nav-underline" aria-hidden="true">
                 {label}
@@ -167,18 +173,19 @@ export function SiteNav() {
         </nav>
 
         <div className="ml-auto max-[600px]:hidden">
-          <MonthStepper />
+          <MonthStepper months={months} selected={selected} />
         </div>
 
         <button
+          ref={burgerRef}
           type="button"
           aria-label={menuOpen ? "Close menu" : "Menu"}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((v) => !v)}
-          className={`ml-auto hidden size-[2.125rem] cursor-pointer place-items-center rounded transition-colors duration-250 active:transition-none max-[600px]:grid ${
+          className={`ml-auto hidden size-[2.125rem] cursor-pointer place-items-center rounded outline-none transition-colors duration-250 active:transition-none max-[600px]:grid ${
             menuOpen
-              ? "bg-white/10 text-white hover:bg-white/15 active:bg-white/15"
-              : "text-ink hover:bg-ink-5 active:bg-ink-5"
+              ? "bg-white/10 text-white hover:bg-white/15 focus-visible:bg-white/15 active:bg-white/15"
+              : "text-ink hover:bg-ink-5 focus-visible:bg-ink-5 active:bg-ink-5"
           }`}
         >
           <Burger open={menuOpen} />

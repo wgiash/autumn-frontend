@@ -3,12 +3,10 @@
    at-end / off-start tags can drive them. The left side sits directly on
    card surface once scrolled, so it stays narrower than the trailing edge. */
 
+import { smoothstepStops } from "./ui/gradient";
+
 const smoothstep = (to: string) =>
-  `linear-gradient(${to}, ${Array.from({ length: 7 }, (_, i) => {
-    const t = i / 6;
-    const a = t * t * (3 - 2 * t);
-    return `color-mix(in srgb, var(--paper) ${Math.round(a * 100)}%, transparent) ${Math.round(t * 100)}%`;
-  }).join(", ")})`;
+  `linear-gradient(${to}, ${smoothstepStops("var(--paper)")})`;
 
 const LEFT = smoothstep("to left");
 const RIGHT = smoothstep("to right");

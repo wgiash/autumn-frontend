@@ -4,17 +4,25 @@ import { CarouselFades } from "@/components/carousel-fades";
 import { Chart } from "@/components/chart";
 import { ArrowUp } from "@/components/icons";
 import { TabButton } from "@/components/ui/tab-button";
+import type { StageDatum, TrendData } from "@/lib/contracts";
 
-const STAGES = [
-  { key: "seen", label: "Seen", value: "7,420", delta: "14%" },
-  { key: "visited", label: "Visited", value: "1,180", delta: "21%" },
-  { key: "booked", label: "Booked direct", value: "41", delta: "9" },
-  { key: "revenue", label: "Revenue", value: "$21,380", delta: "32%" },
-] as const;
+const STAGE_LABELS: Record<StageDatum["key"], string> = {
+  seen: "Seen",
+  visited: "Visited",
+  booked: "Booked direct",
+  revenue: "Revenue",
+};
 
-type StageKey = (typeof STAGES)[number]["key"];
+type StageKey = StageDatum["key"];
 
-export function Trend() {
+/* the booked delta is an absolute count of reservations; the rest are
+   year-over-year percentages */
+const fmtValue = (s: StageDatum) =>
+  (s.key === "revenue" ? "$" : "") + s.value.toLocaleString("en-US");
+const fmtDelta = (s: StageDatum) =>
+  s.delta.kind === "percent" ? `${s.delta.value}%` : `${s.delta.value}`;
+
+export function Trend({ data }: { data: TrendData }) {
   const [stage, setStage] = useState<StageKey>("revenue");
 
   return (
@@ -32,7 +40,9 @@ export function Trend() {
             aria-label="Chart metric for all website bookings"
             className="grid w-[min(100%,40rem)] grid-cols-[repeat(4,minmax(0,1fr))] max-[600px]:w-max max-[600px]:grid-cols-[repeat(4,max-content)]"
           >
-            {STAGES.map(({ key, label, value, delta }) => (
+            {data.stages.map((s) => {
+              const { key } = s;
+              return (
               <TabButton
                 key={key}
                 active={stage === key}
@@ -52,22 +62,25 @@ export function Trend() {
                 }}
                 className="group/stage grid grid-rows-[16px_28px] gap-2 max-[600px]:pr-6"
               >
-                <span className="text-xs/4 font-medium">{label}</span>
+                <span className="text-xs/4 font-medium">
+                  {STAGE_LABELS[key]}
+                </span>
                 <span className="flex min-h-7 items-baseline gap-2 text-2xl/7 font-light tracking-[-0.01em] whitespace-nowrap group-aria-pressed/stage:font-normal">
-                  {value}
+                  {fmtValue(s)}
                   <span className="inline-flex h-5 items-center gap-[3px] self-center rounded-full border border-hairline px-[7px] text-2xs/3.5 font-medium text-ink-72 whitespace-nowrap">
                     <ArrowUp size={9} />
-                    {delta}
+                    {fmtDelta(s)}
                   </span>
                 </span>
               </TabButton>
-            ))}
+              );
+            })}
           </div>
         </div>
         <CarouselFades />
       </div>
 
-      <Chart mode={stage} />
+      <Chart mode={stage} data={data} />
     </section>
   );
 }

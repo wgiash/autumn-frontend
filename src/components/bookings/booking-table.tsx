@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+import { AnimatePresence } from "motion/react";
 import { ChevronDown } from "@/components/icons";
 import { BookingRow, ROW } from "./booking-row";
 import { BookingFilters } from "./booking-filters";
@@ -45,8 +47,10 @@ function SortMark({ dir }: { dir: 0 | 1 | -1 }) {
 
 export function BookingTable({
   controller,
+  monthLabel,
 }: {
   controller: BookingsController;
+  monthLabel: string;
 }) {
   const {
     filtered,
@@ -61,6 +65,15 @@ export function BookingTable({
     stuck,
     sentinelRef,
   } = controller;
+
+  /* ids on screen last render: rows not in the set are newly appended
+     (a broadened filter, a Show-more page) and stagger in */
+  const seenIds = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    seenIds.current = new Set(visible.map((b) => b.id));
+  });
+  let newIndex = 0;
+
   return (
     <section aria-labelledby="list-title" className="mt-6 pb-2">
       {/* pins flush under the nav row itself — its pb-7 is blur zone,
@@ -156,7 +169,15 @@ export function BookingTable({
             0 of 0 bookings shown
           </p>
         ) : (
-          visible.map((b) => <BookingRow key={b.id} b={b} />)
+          /* rows glide to their new order on sort/filter (FLIP), leave
+             with a fold, and freshly-appended pages stagger in */
+          <AnimatePresence initial={false} mode="popLayout">
+            {visible.map((b) => {
+              const isNew = !seenIds.current.has(b.id);
+              const delay = isNew ? Math.min(newIndex++ * 0.03, 0.3) : 0;
+              return <BookingRow key={b.id} b={b} enterDelay={delay} />;
+            })}
+          </AnimatePresence>
         )}
       </div>
 
@@ -178,7 +199,7 @@ export function BookingTable({
       </div>
 
       <p className="mt-6 max-w-[27.5rem] text-xs/4 text-ink-40">
-        Reservations made in August 2026, including future stays. Each
+        Reservations made in {monthLabel}, including future stays. Each
         reservation is counted once by booking channel. Direct attribution uses
         a recorded marketing referral within 30 days; booking-site reservations
         are not credited to Autumn. Values exclude taxes and later

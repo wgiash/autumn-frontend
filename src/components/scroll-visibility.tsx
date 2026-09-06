@@ -6,12 +6,12 @@ import { useEffect } from "react";
    under the pointer. Renders nothing. */
 export function ScrollVisibility() {
   useEffect(() => {
-    const timers = new WeakMap<Element, number>();
+    const timers = new Map<Element, number>();
     /* horizontal rows tag both edges; the carousel fades key off them */
     const tagEdgesX = (el: Element) => {
       el.classList.toggle(
         "at-end",
-        el.scrollLeft + el.clientWidth >= el.scrollWidth - 2
+        el.scrollLeft + el.clientWidth >= el.scrollWidth - 2,
       );
       el.classList.toggle("off-start", el.scrollLeft > 2);
     };
@@ -27,14 +27,17 @@ export function ScrollVisibility() {
       else {
         el.classList.toggle(
           "at-end",
-          el.scrollTop + el.clientHeight >= el.scrollHeight - 2
+          el.scrollTop + el.clientHeight >= el.scrollHeight - 2,
         );
         el.classList.toggle("off-start", el.scrollTop > 2);
       }
       window.clearTimeout(timers.get(el));
       timers.set(
         el,
-        window.setTimeout(() => el.classList.remove("is-scrolling"), 700)
+        window.setTimeout(() => {
+          el.classList.remove("is-scrolling");
+          timers.delete(el);
+        }, 700),
       );
     };
     /* a region with nothing to scroll forwards the wheel to the main
@@ -69,15 +72,24 @@ export function ScrollVisibility() {
        (a details opening, a breakpoint move), so edges retag on resize;
        rows mounted later (route changes) are picked up by the observer */
     const ro = new ResizeObserver((entries) =>
-      entries.forEach((entry) => tagEdgesX(entry.target))
+      entries.forEach((entry) => tagEdgesX(entry.target)),
     );
-    const seen = new WeakSet<Element>();
+    const observed = new Set<Element>();
     const scan = () => {
+      // ResizeObserver retains its targets. Release rows removed during navigation.
+      for (const row of observed) {
+        if (row.isConnected) continue;
+        ro.unobserve(row);
+        observed.delete(row);
+        window.clearTimeout(timers.get(row));
+        timers.delete(row);
+        row.classList.remove("is-scrolling");
+      }
       document
         .querySelectorAll(".square-scroll-x, .stage-scroll")
         .forEach((row) => {
-          if (seen.has(row)) return;
-          seen.add(row);
+          if (observed.has(row)) return;
+          observed.add(row);
           tagEdgesX(row);
           ro.observe(row);
         });
@@ -91,6 +103,12 @@ export function ScrollVisibility() {
       document.removeEventListener("wheel", onWheel);
       ro.disconnect();
       mo.disconnect();
+      observed.clear();
+      for (const [element, timer] of timers) {
+        window.clearTimeout(timer);
+        element.classList.remove("is-scrolling");
+      }
+      timers.clear();
     };
   }, []);
   return null;
