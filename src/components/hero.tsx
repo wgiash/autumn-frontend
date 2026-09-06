@@ -1,5 +1,6 @@
 import type { OutcomeData } from "@/lib/contracts";
 import { DetailLink } from "@/components/detail-link";
+import { Greeting } from "@/components/greeting";
 import { Download } from "@/components/icons";
 import { money } from "@/components/bookings/format";
 
@@ -31,7 +32,7 @@ export function Hero({
     <section aria-label={`Your ${monthName} with Autumn`}>
       <div className="mb-6 flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-sm/5 text-ink-72">Good evening, Don</p>
+          <Greeting name="Don" />
           <h1 className="mt-2 max-w-[40.625rem] font-display text-display/[1.15] font-light tracking-[-0.02em] text-balance">
             Your {monthName} with Autumn.
           </h1>

@@ -66,8 +66,7 @@ export function BookingTable({
     sentinelRef,
   } = controller;
 
-  /* ids on screen last render: rows not in the set are newly appended
-     (a broadened filter, a Show-more page) and stagger in */
+  // Compare row sets so only newly added reservations receive an entrance delay.
   const [rowSnapshot, setRowSnapshot] = useState(() => ({
     rows: visible,
     previousIds: new Set<string>(),

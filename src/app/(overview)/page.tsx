@@ -1,5 +1,7 @@
+import { Suspense } from "react";
 import type { MonthKey } from "@/lib/contracts";
 import { getAvailableMonths, getMonthData } from "@/lib/queries";
+import { OverviewSkeleton } from "./overview-skeleton";
 import { Hero } from "@/components/hero";
 import { Rail, RailRow } from "@/components/rail";
 import { RecentBookings } from "@/components/recent-bookings";
@@ -18,6 +20,19 @@ export default async function Home({
   const month: MonthKey = months.some((m) => m.value === raw)
     ? (raw as MonthKey)
     : months[months.length - 1].value;
+
+  /* the boundary is keyed by month: stepping months remounts it, so the
+     skeleton holds the layout while the new month streams in — loading.tsx
+     alone never fires on a same-route searchParams navigation */
+  const monthLabel = months.find((m) => m.value === month)?.label;
+  return (
+    <Suspense key={month} fallback={<OverviewSkeleton monthLabel={monthLabel} />}>
+      <OverviewContent month={month} />
+    </Suspense>
+  );
+}
+
+async function OverviewContent({ month }: { month: MonthKey }) {
   const data = await getMonthData(month);
 
   return (

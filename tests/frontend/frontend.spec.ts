@@ -8,6 +8,19 @@ async function openPage(page: Page, path: string) {
       ? "See all of your bookings in one place."
       : "Your August with Autumn.",
   );
+  // Route headings also appear in loading fallbacks; wait for the report itself.
+  if (path.startsWith("/bookings")) {
+    await expect(
+      page.locator('section[aria-labelledby="list-title"] details'),
+    ).toHaveCount(10);
+  } else {
+    await expect(
+      page.getByRole("group", { name: "Chart metric for all website bookings" }),
+    ).toBeVisible();
+    await expect(
+      page.locator('[aria-label="Attention and Autumn\'s next steps"]:visible'),
+    ).toBeVisible();
+  }
   await page.mouse.move(0, 0);
   await page.addStyleTag({
     content: "nextjs-portal { pointer-events: none; visibility: hidden; }",
