@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { generateChartMarkup } from "@/lib/chart-gen";
 import type { TrendData } from "@/lib/contracts";
 import { ArrowUpRight } from "@/components/icons";
@@ -94,6 +94,36 @@ export function Chart({ mode, data }: { mode: Mode; data: TrendData }) {
     onPointerLeave,
   } = useChartInteraction(mode, weeks, openFigures);
 
+  /* like the context menus, the tooltip never hides under the chrome:
+     when its spot scrolls beneath the nav it rides down inside the plot,
+     pinned just under the bar */
+  const [tipTop, setTipTop] = useState<number | null>(null);
+  useEffect(() => {
+    if (!tipVisible) return;
+    const clamp = () => {
+      const wrap = wrapRef.current;
+      if (!wrap) return;
+      const navH =
+        parseFloat(
+          getComputedStyle(document.documentElement).getPropertyValue(
+            "--nav-h"
+          )
+        ) || 60;
+      const wrapTop = wrap.getBoundingClientRect().top;
+      setTipTop(Math.max(6, navH + 6 - wrapTop));
+    };
+    clamp();
+    document.addEventListener("scroll", clamp, {
+      capture: true,
+      passive: true,
+    });
+    window.addEventListener("resize", clamp);
+    return () => {
+      document.removeEventListener("scroll", clamp, true);
+      window.removeEventListener("resize", clamp);
+    };
+  }, [tipVisible, wrapRef]);
+
   const week = tip ? weeks[tip.i] : null;
 
   const legend = legendFor(data)[mode];
@@ -124,6 +154,7 @@ export function Chart({ mode, data }: { mode: Mode; data: TrendData }) {
           className="chart-tip is-live"
           style={{
             left: tip?.left ?? 0,
+            top: tipTop ?? undefined,
             opacity: tipVisible ? 1 : 0,
             pointerEvents: tipVisible ? "auto" : "none",
           }}

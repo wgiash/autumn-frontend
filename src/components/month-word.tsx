@@ -1,22 +1,14 @@
 "use client";
-import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { EASE } from "@/components/ui/motion";
 
-/* The month name blur-emerges in place when a STEPPED month's screen
-   mounts. The latch stays false through the first hydration, so the
-   server-painted word never flashes a re-entrance over itself — only
-   later mounts (client-side month swaps) animate. */
-let pastHydration = false;
-
+/* The month name blur-emerges in place — on first load and again on every
+   stepped month (the screen remounts per month). The server paints the
+   initial hidden state inline, so the word never flashes visible first;
+   the loading skeleton holds a month-shaped shimmer in the meantime. */
 export function MonthWord({ children }: { children: string }) {
   const reduce = useReducedMotion();
-  const [animates] = useState(() => pastHydration);
-  useEffect(() => {
-    pastHydration = true;
-  }, []);
-  if (!animates || reduce)
-    return <span className="inline-block">{children}</span>;
+  if (reduce) return <span className="inline-block">{children}</span>;
   return (
     <motion.span
       className="inline-block"
