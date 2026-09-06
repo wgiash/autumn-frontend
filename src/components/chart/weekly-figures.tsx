@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import type { Week } from "../chart-data";
+import type { WeekDatum as Week } from "@/lib/contracts";
 import { Close } from "../icons";
 import { money } from "../ui/format";
 import { ts, weekLabel } from "./format";

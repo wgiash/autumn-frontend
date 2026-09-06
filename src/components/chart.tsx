@@ -27,12 +27,12 @@ const UNIT_LABELS: Record<Mode, string> = {
    booked prior backs out of its absolute year-over-year delta). */
 function legendFor(
   data: TrendData
-): Record<Mode, { now: number; prior: number; next: number; money?: boolean; note?: string }> {
+): Record<Mode, { now: number; prior: number | null; next: number; money?: boolean; note?: string }> {
   const stage = (key: Mode) => data.stages.find((s) => s.key === key);
   const value = (key: Mode) => stage(key)?.value ?? 0;
   const booked = stage("booked");
   const bookedPrior =
-    booked && booked.delta.kind === "absolute"
+    !booked || booked.delta.value === null ? null : booked.delta.kind === "absolute"
       ? booked.value - booked.delta.value
       : Math.round((booked?.value ?? 0) / (1 + (booked?.delta.value ?? 0) / 100));
   const { priorMonth, nextExpected } = data.legend;
@@ -127,8 +127,8 @@ export function Chart({ mode, data }: { mode: Mode; data: TrendData }) {
   const week = tip ? weeks[tip.i] : null;
 
   const legend = legendFor(data)[mode];
-  const fmt = (n: number) =>
-    legend.money ? money(n) : n.toLocaleString("en-US");
+  const fmt = (n: number | null) =>
+    n === null ? "Unavailable" : legend.money ? money(n) : n.toLocaleString("en-US");
 
   return (
     <section className={`chart-port mode-${mode}`}>
@@ -166,7 +166,9 @@ export function Chart({ mode, data }: { mode: Mode; data: TrendData }) {
                 {week.bookings} direct bookings · {money(week.rev)}
               </span>
               <small>
-                Prior year: {week.priorBookings} · {money(week.priorRev)}
+                {week.priorBookings === null || week.priorRev === null
+                  ? "Prior year unavailable"
+                  : `Prior year: ${week.priorBookings} · ${money(week.priorRev)}`}
               </small>
               <button
                 type="button"

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import type { Week } from "../chart-data";
+import type { WeekDatum as Week } from "@/lib/contracts";
 import type { Mode } from "./types";
 
 export function useChartInteraction(

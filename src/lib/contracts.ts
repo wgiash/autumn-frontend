@@ -14,7 +14,7 @@ export type MonthOption = { value: MonthKey; label: string }; // "August 2026"
 export type StageDatum = {
   key: "seen" | "visited" | "booked" | "revenue";
   value: number; // raw number; components format
-  delta: { value: number; kind: "percent" | "absolute" };
+  delta: { value: number | null; kind: "percent" | "absolute" };
 };
 
 /* ── weekly chart series (52 rows ending in the viewed month) ── */
@@ -24,19 +24,19 @@ export type WeekDatum = {
   visits: number;
   bookings: number; // direct
   rev: number; // direct revenue, dollars
-  priorBookings: number; // same week last year
-  priorRev: number;
+  priorBookings: number | null; // null means comparison history is unavailable
+  priorRev: number | null;
   /* prior-year traffic for the chart's ghost curves; optional so older
      callers keep compiling, always filled by the query layer */
-  priorAdViews?: number;
-  priorVisits?: number;
+  priorAdViews?: number | null;
+  priorVisits?: number | null;
 };
 
 export type ForecastDatum = { start: string; rev: number };
 
 export type LegendDatum = {
   /* per metric: this month, same month last year, next month expected */
-  priorMonth: { adViews: number; visits: number; rev: number };
+  priorMonth: { adViews: number | null; visits: number | null; rev: number | null };
   nextExpected: {
     adViews: number;
     visits: number;

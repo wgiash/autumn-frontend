@@ -1,13 +1,8 @@
 import type { MonthKey } from "@/lib/contracts";
 import { getAvailableMonths, getMonthData } from "@/lib/queries";
+import { csvCell } from "@/lib/csv";
 
 export const revalidate = 3600;
-
-/* one CSV cell: quote anything that would break the row */
-function cell(value: string | number | boolean) {
-  const text = String(value);
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
 
 const COLUMNS = [
   "id",
@@ -40,7 +35,7 @@ export async function GET(
   const csv = [
     COLUMNS.join(","),
     ...bookings.map((booking) =>
-      COLUMNS.map((column) => cell(booking[column])).join(","),
+      COLUMNS.map((column) => csvCell(booking[column])).join(","),
     ),
   ].join("\n");
 

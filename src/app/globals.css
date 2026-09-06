@@ -198,6 +198,23 @@ body:has(dialog[open]) .nav-veil {
   }
 }
 
+/* the hero's month name blur-emerges in place; `both` keeps it hidden on
+   the very first frame, before the animation clock starts */
+.month-word-in {
+  animation: month-word-in 320ms var(--ease) both;
+}
+@keyframes month-word-in {
+  from {
+    opacity: 0;
+    filter: blur(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .month-word-in {
+    animation: none;
+  }
+}
+
 /* the arriving screen fades in over the skeleton that held its place */
 .page-fade {
   animation: page-fade-in 240ms var(--ease);

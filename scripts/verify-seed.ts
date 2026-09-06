@@ -6,7 +6,7 @@
    Run: npm run verify  (node --env-file=.env.local + tsx) */
 import { isDeepStrictEqual } from "node:util";
 import { BOOKINGS } from "../src/components/bookings-data";
-import { FORECAST, LAST_AUGUST_TOTAL, SEPTEMBER_EXPECTED, WEEKS } from "../src/components/chart-data";
+import { FORECAST, SEPTEMBER_EXPECTED, WEEKS } from "../src/components/chart-data";
 import { getSql } from "../src/lib/db";
 import { getAvailableMonths, getMonthData } from "../src/lib/queries";
 
@@ -119,21 +119,21 @@ async function main() {
   const sortById = <T extends { id: string }>(rows: T[]) => [...rows].sort((x, y) => x.id.localeCompare(y.id));
   check("August: bookings match bookings-data.ts verbatim (labels included)", sortById(b), sortById([...BOOKINGS]));
 
-  /* stages: 7420 / 1,180 / 41 / $21,380 with the dashboard's deltas */
+  /* Calendar-month KPIs include boundary days, unlike the old four-week totals. */
   check(
-    "August: stage totals and deltas",
+    "August: calendar-month stage totals and deltas",
     august.trend.stages,
     [
-      { key: "seen", value: 7420, delta: { value: 14, kind: "percent" } },
-      { key: "visited", value: 1180, delta: { value: 21, kind: "percent" } },
-      { key: "booked", value: 41, delta: { value: 9, kind: "absolute" } },
-      { key: "revenue", value: 21380, delta: { value: 32, kind: "percent" } },
+      { key: "seen", value: 8220, delta: { value: 15, kind: "percent" } },
+      { key: "visited", value: 1307, delta: { value: 22, kind: "percent" } },
+      { key: "booked", value: 41, delta: { value: 5, kind: "absolute" } },
+      { key: "revenue", value: 21380, delta: { value: 17, kind: "percent" } },
     ],
   );
-  check("August: legend prior month (6509 / 975 / $16,197)", august.trend.legend.priorMonth, {
-    adViews: 6509,
-    visits: 975,
-    rev: LAST_AUGUST_TOTAL,
+  check("August: calendar-month prior-year legend", august.trend.legend.priorMonth, {
+    adViews: 7135,
+    visits: 1073,
+    rev: 18295.49,
   });
   check("August: legend next expected (September)", august.trend.legend.nextExpected, {
     adViews: 6402,

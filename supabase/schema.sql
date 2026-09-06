@@ -3,11 +3,8 @@
 -- Money is stored as integer cents everywhere (value_cents, *_revenue_cents,
 -- fee_cents, stays_booked_value_cents); the query layer converts to dollars.
 --
--- Row Level Security is deliberately left DISABLED on all tables: this is a
--- public demo dataset with no per-user rows, read through a server-side
--- Postgres connection only (no client-side Supabase reads), so RLS policies
--- would add no protection here. A real multi-tenant deployment would enable
--- RLS and scope every table by hotel/account id.
+-- Server-only access: RLS is enabled and client-role grants are revoked below.
+-- Existing databases must use migrations, not this destructive demo reset.
 
 drop table if exists bookings;
 drop table if exists daily_metrics;
@@ -112,3 +109,18 @@ create table referral_categories (
   referral text primary key,
   category text not null
 );
+
+alter table public.bookings enable row level security;
+alter table public.daily_metrics enable row level security;
+alter table public.monthly_expectations enable row level security;
+alter table public.weekly_forecast enable row level security;
+alter table public.visibility_checks enable row level security;
+alter table public.actions enable row level security;
+alter table public.referral_categories enable row level security;
+
+revoke all privileges on table
+  public.bookings, public.daily_metrics, public.monthly_expectations,
+  public.weekly_forecast, public.visibility_checks, public.actions,
+  public.referral_categories
+from anon, authenticated;
+revoke all privileges on sequence public.actions_id_seq from anon, authenticated;

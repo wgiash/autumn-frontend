@@ -4,14 +4,18 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import postgres from "postgres";
+import { assertDemoReset } from "./demo-safety";
 
 async function main() {
+  assertDemoReset();
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set (use --env-file=.env.local)");
   const sql = postgres(url, { prepare: false, ssl: "require", max: 1, onnotice: () => {} });
   const ddl = readFileSync(join(import.meta.dirname, "..", "supabase", "schema.sql"), "utf8");
   try {
-    await sql.unsafe(ddl);
+    await sql.begin(async (transaction) => {
+      await transaction.unsafe(ddl);
+    });
     console.log("schema applied");
   } finally {
     await sql.end();

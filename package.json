@@ -8,11 +8,12 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "node --import tsx --test src/components/**/*.test.mjs",
+    "test": "node --import tsx --test src/components/**/*.test.mjs src/lib/*.test.mjs scripts/*.test.mjs",
     "test:e2e": "playwright test",
     "db:push": "node --env-file=.env.local node_modules/.bin/tsx scripts/db-push.ts",
+    "db:secure": "node --env-file=.env.local node_modules/.bin/tsx scripts/secure-database.ts",
     "seed": "node --env-file=.env.local node_modules/.bin/tsx scripts/seed.ts",
-    "verify": "node --env-file=.env.local node_modules/.bin/tsx scripts/verify-seed.ts"
+    "verify": "node --env-file=.env.local node_modules/.bin/tsx scripts/verify-seed.ts && node --env-file=.env.local node_modules/.bin/tsx scripts/verify-backend.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.115.0",

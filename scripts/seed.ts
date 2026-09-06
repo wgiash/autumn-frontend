@@ -13,6 +13,8 @@
    Run: npm run seed  (node --env-file=.env.local + tsx) */
 
 import postgres from "postgres";
+import { assertDemoReset } from "./demo-safety";
+import { replaceDemoData } from "./replace-demo-data";
 import { BOOKINGS, type Booking } from "../src/components/bookings-data";
 import { FORECAST, WEEKS } from "../src/components/chart-data";
 
@@ -725,12 +727,12 @@ GENERATED_MONTHS.forEach((month, mi) => {
 /* ═══════════════ 5. write everything ═══════════════════════════════════ */
 
 async function main() {
+  assertDemoReset();
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set (use --env-file=.env.local)");
   const sql = postgres(url, { prepare: false, ssl: "require", max: 1 });
   try {
-    await sql`truncate bookings, daily_metrics, monthly_expectations, weekly_forecast, visibility_checks, actions, referral_categories restart identity`;
-
+    await replaceDemoData(sql, async (sql) => {
     const chunk = <T,>(rows: T[], size: number) => {
       const out: T[][] = [];
       for (let i = 0; i < rows.length; i += size) out.push(rows.slice(i, i + size));
@@ -750,6 +752,7 @@ async function main() {
     await sql`insert into referral_categories ${sql(
       Object.entries(DEFAULT_CATEGORY).map(([referral, category]) => ({ referral, category })),
     )}`;
+    });
 
     console.log(
       `seeded: ${allBookings.length} bookings (${canonicalRows.length} canonical August), ` +

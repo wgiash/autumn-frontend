@@ -20,7 +20,7 @@ type StageKey = StageDatum["key"];
 const fmtValue = (s: StageDatum) =>
   (s.key === "revenue" ? "$" : "") + s.value.toLocaleString("en-US");
 const fmtDelta = (s: StageDatum) =>
-  s.delta.kind === "percent" ? `${s.delta.value}%` : `${s.delta.value}`;
+  s.delta.value === null ? "N/A" : s.delta.kind === "percent" ? `${s.delta.value}%` : `${s.delta.value}`;
 
 export function Trend({ data }: { data: TrendData }) {
   const [stage, setStage] = useState<StageKey>("revenue");
@@ -68,7 +68,7 @@ export function Trend({ data }: { data: TrendData }) {
                 <span className="flex min-h-7 items-baseline gap-2 text-2xl/7 font-light tracking-[-0.01em] whitespace-nowrap group-aria-pressed/stage:font-normal">
                   {fmtValue(s)}
                   <span className="inline-flex h-5 items-center gap-[3px] self-center rounded-full border border-hairline px-[7px] text-2xs/3.5 font-medium text-ink-72 whitespace-nowrap">
-                    <ArrowUp size={9} />
+                    {s.delta.value !== null && <ArrowUp size={9} />}
                     {fmtDelta(s)}
                   </span>
                 </span>

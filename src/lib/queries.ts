@@ -3,10 +3,9 @@
    filtered sums, percentiles); TypeScript only shapes rows, converts cents
    to dollars, and precomputes display labels.
 
-   Week semantics: a week is a Monday-started ISO week, and it belongs to
-   the month its Thursday falls in — so August 2026 is the four weeks
-   Aug 3 – Aug 30, matching the canonical dashboard figures. Year-over-year
-   comparisons join each week to the week 364 days earlier. */
+   Monthly KPIs use calendar dates, matching the booking list and export.
+   Chart observations remain Monday-started weeks assigned by Thursday;
+   weekly comparisons join 364 days earlier, only with complete history. */
 import { cache } from "react";
 import type { Booking } from "@/components/bookings/model";
 import type {
@@ -55,7 +54,7 @@ function mondaysOfMonth(month: string): string[] {
 }
 
 function assertMonthKey(month: string): asserts month is MonthKey {
-  if (!/^\d{4}-\d{2}$/.test(month)) throw new Error(`invalid month key: ${month}`);
+  if (!/^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(month)) throw new Error(`invalid month key: ${month}`);
 }
 
 /* "Aug 10–12" within a month, "Sep 29 – Oct 1" across months */
@@ -66,7 +65,8 @@ function stayLabel(arrival: string, nights: number) {
     : `${dayLabel(arrival)} – ${dayLabel(departure)}`;
 }
 
-const pctDelta = (cur: number, prior: number) => (prior > 0 ? Math.round((cur / prior - 1) * 100) : 0);
+const pctDelta = (cur: number, prior: number | null) =>
+  prior !== null && prior > 0 ? Math.round((cur / prior - 1) * 100) : null;
 
 /* ═══════════════ the contract surface ═══════════════ */
 
@@ -86,38 +86,46 @@ export const getMonthData = cache(async (month: MonthKey): Promise<MonthData> =>
   const sql = getSql();
   const first = `${month}-01`;
   const nextFirst = nextMonthFirst(month);
+  const priorMonth = `${Number(month.slice(0, 4)) - 1}${month.slice(4)}`;
+  const priorFirst = `${priorMonth}-01`;
+  const priorNext = nextMonthFirst(priorMonth);
+  const forecastMondays = mondaysOfMonth(nextFirst.slice(0, 7));
   const monthMondays = mondaysOfMonth(month);
   const lastWeek = monthMondays[monthMondays.length - 1];
   const firstWeek = addDays(lastWeek, -357); // 52 weeks ending with the month's last week
 
-  const [weekRows, forecastRows, expectedRows, outcomeRows, visibilityRows, actionRows, bookingRows, channelRows, stayRows, aheadRows, nightRows, cityRows, foundRows, deviceRows, reviewRows] =
+  const [weekRows, forecastRows, expectedRows, outcomeRows, visibilityRows, actionRows, bookingRows, channelRows, stayRows, aheadRows, nightRows, cityRows, foundRows, deviceRows, reviewRows, monthlyRows] =
     await Promise.all([
       sql<{
         start: string; ad_views: number; visits: number; bookings: number; rev_cents: number;
-        prior_ad_views: number; prior_visits: number; prior_bookings: number; prior_rev_cents: number;
+        prior_ad_views: number | null; prior_visits: number | null;
+        prior_bookings: number | null; prior_rev_cents: number | null;
       }[]>`
         with weekly as (
           select (date_trunc('week', date))::date as start,
                  sum(ad_views)::int as ad_views,
                  sum(visits)::int as visits,
                  sum(direct_bookings)::int as bookings,
-                 sum(direct_revenue_cents)::int as rev_cents
+                 sum(direct_revenue_cents)::int as rev_cents,
+                 count(*)::int as days
           from daily_metrics
           group by 1
         )
         select w.start::text as start, w.ad_views, w.visits, w.bookings, w.rev_cents,
-               coalesce(p.ad_views, 0)::int as prior_ad_views,
-               coalesce(p.visits, 0)::int as prior_visits,
-               coalesce(p.bookings, 0)::int as prior_bookings,
-               coalesce(p.rev_cents, 0)::int as prior_rev_cents
+               p.ad_views as prior_ad_views,
+               p.visits as prior_visits,
+               p.bookings as prior_bookings,
+               p.rev_cents as prior_rev_cents
         from weekly w
-        left join weekly p on p.start = w.start - 364
+        left join weekly p on p.start = w.start - 364 and p.days = 7
         where w.start >= ${firstWeek} and w.start <= ${lastWeek}
         order by w.start`,
       sql<{ start: string; rev_cents: number }[]>`
         select week_start::text as start, expected_revenue_cents as rev_cents
-        from weekly_forecast where week_start > ${lastWeek}
-        order by week_start limit 4`,
+        from weekly_forecast
+        where week_start >= ${forecastMondays[0]}
+          and week_start <= ${forecastMondays[forecastMondays.length - 1]}
+        order by week_start`,
       sql<{ ad: number; vis: number; book: number; rev: number; stays: number; stays_value: number }[]>`
         select expected_ad_views as ad, expected_visits as vis, expected_bookings as book,
                expected_revenue_cents as rev, stays_booked_count as stays,
@@ -193,28 +201,37 @@ export const getMonthData = cache(async (month: MonthKey): Promise<MonthData> =>
         select count(*)::int as n
         from bookings where booked >= ${first} and booked < ${nextFirst}
           and channel = 'Your website' and referral = 'Not recorded'`,
+      sql<{ month: string; days: number; ad: number; vis: number; book: number; rev: number }[]>`
+        select to_char(date, 'YYYY-MM') as month, count(*)::int as days,
+               sum(ad_views)::int as ad, sum(visits)::int as vis,
+               sum(direct_bookings)::int as book, sum(direct_revenue_cents)::int as rev
+        from daily_metrics
+        where (date >= ${first} and date < ${nextFirst})
+           or (date >= ${priorFirst} and date < ${priorNext})
+        group by 1`,
     ]);
 
   /* ── trend ── */
-  const monthWeekSet = new Set(monthMondays);
-  const monthWeeks = weekRows.filter((w) => monthWeekSet.has(w.start));
-  const sum = (f: (w: (typeof weekRows)[number]) => number) => monthWeeks.reduce((t, w) => t + f(w), 0);
+  const o = outcomeRows[0];
+  const currentMonth = monthlyRows.find((row) => row.month === month);
+  const previousMonth = monthlyRows.find((row) => row.month === priorMonth);
+  const completePrior = previousMonth?.days === (ts(priorNext) - ts(priorFirst)) / DAY;
   const cur = {
-    seen: sum((w) => w.ad_views),
-    visited: sum((w) => w.visits),
-    booked: sum((w) => w.bookings),
-    revenue: sum((w) => w.rev_cents) / 100,
+    seen: currentMonth?.ad ?? 0,
+    visited: currentMonth?.vis ?? 0,
+    booked: o.direct_count,
+    revenue: o.direct_value / 100,
   };
   const prior = {
-    seen: sum((w) => w.prior_ad_views),
-    visited: sum((w) => w.prior_visits),
-    booked: sum((w) => w.prior_bookings),
-    revenue: sum((w) => w.prior_rev_cents) / 100,
+    seen: completePrior ? previousMonth.ad : null,
+    visited: completePrior ? previousMonth.vis : null,
+    booked: completePrior ? previousMonth.book : null,
+    revenue: completePrior ? previousMonth.rev / 100 : null,
   };
   const stages: StageDatum[] = [
     { key: "seen", value: cur.seen, delta: { value: pctDelta(cur.seen, prior.seen), kind: "percent" } },
     { key: "visited", value: cur.visited, delta: { value: pctDelta(cur.visited, prior.visited), kind: "percent" } },
-    { key: "booked", value: cur.booked, delta: { value: cur.booked - prior.booked, kind: "absolute" } },
+    { key: "booked", value: cur.booked, delta: { value: prior.booked === null ? null : cur.booked - prior.booked, kind: "absolute" } },
     { key: "revenue", value: cur.revenue, delta: { value: pctDelta(cur.revenue, prior.revenue), kind: "percent" } },
   ];
   const weeks: WeekDatum[] = weekRows.map((w) => ({
@@ -224,7 +241,7 @@ export const getMonthData = cache(async (month: MonthKey): Promise<MonthData> =>
     bookings: w.bookings,
     rev: w.rev_cents / 100,
     priorBookings: w.prior_bookings,
-    priorRev: w.prior_rev_cents / 100,
+    priorRev: w.prior_rev_cents === null ? null : w.prior_rev_cents / 100,
     priorAdViews: w.prior_ad_views,
     priorVisits: w.prior_visits,
   }));
@@ -249,7 +266,6 @@ export const getMonthData = cache(async (month: MonthKey): Promise<MonthData> =>
   };
 
   /* ── outcomes ── */
-  const o = outcomeRows[0];
   const completed = actionRows.filter((a) => !a.planned);
   const outcomes: OutcomeData = {
     attributedValue: o.attributed_value / 100,

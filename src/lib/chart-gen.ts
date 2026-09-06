@@ -16,28 +16,19 @@
      reached 2 weeks before the window; TrendData only carries the 52
      in-window priors, so the mean clamps at the edges (a ~1.7px residual on
      the revenue ghost's first point, within rounding elsewhere).
-   - The contract has no prior-year traffic (adViews/visits), so those
-     ghosts scale priorRev by this year's traffic-per-revenue ratio, and
-     those fore paths distribute legend.nextExpected over the prior
-     September's weekly shape. Booked/revenue fore values are exact
-     (prior week × measured YoY growth; the forecast rows for revenue).
+   - Missing prior observations remain gaps. Forecast shapes are normalized
+     to the same monthly expectations displayed by the legend.
    - The action-mark machinery (marks, action dots/tips, the :has() style
      rules) is dormant in this app; pass marks to emit it, omit for none. */
 
-import type { TrendData, WeekDatum } from "@/lib/contracts";
+import type { TrendData } from "@/lib/contracts";
+import { forecastValues, METRIC_FIELD as FIELD, type Metric } from "./chart-series";
 
 export type ChartMark = {
   date: string; // ISO date
   label: string;
   plannedLabel?: string; // shown instead of label once the date is next month
   railId?: string; // rail-feed id: emits mk-/action-dot-/action-tip- wiring
-};
-
-/* WeekDatum, plus the prior-year traffic the contract may grow someday.
-   When present it feeds the seen/visited ghosts directly. */
-type WeekWithPriorTraffic = WeekDatum & {
-  priorAdViews?: number;
-  priorVisits?: number;
 };
 
 const DAY = 86400000;
@@ -72,6 +63,7 @@ const yearOf = (t: number) => new Date(t).getUTCFullYear();
 /* Fritsch-Carlson-style monotone cubic, straight from the prototype. */
 function monotone(pts: { x: number; y: number }[]) {
   const n = pts.length;
+  if (!n) return "";
   const dx: number[] = [], m: number[] = [];
   for (let i = 0; i < n - 1; i++) { dx[i] = pts[i + 1].x - pts[i].x; m[i] = (pts[i + 1].y - pts[i].y) / dx[i]; }
   const t = [m[0]];
@@ -90,16 +82,12 @@ function monotone(pts: { x: number; y: number }[]) {
   return d;
 }
 
-type Metric = "seen" | "visited" | "booked" | "revenue";
-const FIELD: Record<Metric, "adViews" | "visits" | "bookings" | "rev"> = {
-  seen: "adViews",
-  visited: "visits",
-  booked: "bookings",
-  revenue: "rev",
-};
 const AXIS_STEP: Record<Metric, number> = { seen: 500, visited: 100, booked: 2, revenue: 1000 };
 
 export function generateChartMarkup(trend: TrendData, marks: ChartMark[] = []): string {
+  if (!trend.weeks.length) {
+    return '<div class="chart-scroll" role="region" aria-label="Performance chart"><p class="py-8 text-sm text-ink-56">No weekly figures available.</p></div>';
+  }
   const [yy, mm] = trend.month.split("-").map(Number);
   const nowM = Date.UTC(yy, mm - 1, 1);
   const nd = new Date(nowM);
@@ -111,7 +99,7 @@ export function generateChartMarkup(trend: TrendData, marks: ChartMark[] = []): 
 
   /* the observed weeks and the forecast weeks, on the shared grid */
   const t0Of = (start: string) => Date.parse(start + "T00:00:00Z");
-  const hist = trend.weeks.map((w, k) => ({ ...(w as WeekWithPriorTraffic), k, t0: t0Of(w.start), tm: t0Of(w.start) + 3.5 * DAY }));
+  const hist = trend.weeks.map((w, k) => ({ ...w, k, t0: t0Of(w.start), tm: t0Of(w.start) + 3.5 * DAY }));
   const fore = trend.forecast.map((w, k) => ({ ...w, k: hist.length + k, t0: t0Of(w.start), tm: t0Of(w.start) + 3.5 * DAY }));
   const all = [...hist, ...fore];
 
@@ -129,41 +117,26 @@ export function generateChartMarkup(trend: TrendData, marks: ChartMark[] = []): 
   const xWeek = (w: { k: number }) => weekSlots.get(w.k)!.x;
   const yScale = (max: number) => (v: number) => Y_BASE - (v / max) * (Y_BASE - Y_TOP);
 
-  /* prior-year weekly values per metric. Bookings and revenue ride the
-     contract; traffic priors fall back to priorRev scaled by this year's
-     traffic-per-revenue ratio when the contract doesn't carry them. */
-  const sum = (rows: { [k: string]: unknown }[], field: string) =>
-    rows.reduce((a, r) => a + (r[field] as number), 0);
-  const perRev = (field: "adViews" | "visits") => sum(hist, field) / sum(hist, "rev");
-  const seenPerRev = perRev("adViews");
-  const visitsPerRev = perRev("visits");
-  const priorOf = (metric: Metric, j: number): number => {
+  const priorOf = (metric: Metric, j: number): number | null => {
     const w = hist[j];
     if (metric === "booked") return w.priorBookings;
     if (metric === "revenue") return w.priorRev;
-    if (metric === "seen") return w.priorAdViews ?? w.priorRev * seenPerRev;
-    return w.priorVisits ?? w.priorRev * visitsPerRev;
+    if (metric === "seen") return w.priorAdViews ?? null;
+    return w.priorVisits ?? null;
   };
-  /* centered 4-week mean for the ghost; indices past the prior window's end
-     land on this year's first weeks (the prior year of the forecast month),
-     and indices before its start clamp away */
+  const comparisonAt = (metric: Metric, k: number): number | null => {
+    if (k < hist.length) return priorOf(metric, k);
+    const week = fore[k - hist.length];
+    return hist.find((row) => row.t0 === week?.t0 - 364 * DAY)?.[FIELD[metric]] ?? null;
+  };
+  // Smooth only known values, and leave a gap wherever the comparison is missing.
   const smooth = (metric: Metric, k: number) => {
-    const js = [k - 2, k - 1, k, k + 1].filter(
-      (j) => j >= 0 && (j < 52 ? j < hist.length : j - 52 < hist.length)
-    );
-    return js.reduce((a, j) => a + (j < 52 ? priorOf(metric, j) : hist[j - 52][FIELD[metric]]), 0) / js.length;
-  };
-  /* expected next month per metric: booked and revenue exactly as the
-     prototype derived them (prior week × measured growth; the contract's
-     forecast rows for revenue), traffic scaled to legend.nextExpected */
-  const gBooked = sum(hist, "bookings") / sum(hist, "priorBookings");
-  const foreValue = (metric: Metric, j: number): number => {
-    if (metric === "revenue") return fore[j].rev;
-    if (metric === "booked") return hist[j].bookings * gBooked;
-    const field = FIELD[metric];
-    const priorShape = fore.map((_, i) => hist[i][field] as number);
-    const total = metric === "seen" ? trend.legend.nextExpected.adViews : trend.legend.nextExpected.visits;
-    return (hist[j][field] as number) * (total / priorShape.reduce((a, b) => a + b, 0));
+    if (comparisonAt(metric, k) === null) return null;
+    const values = [k - 2, k - 1, k, k + 1]
+      .filter((j) => j >= 0 && j < all.length)
+      .map((j) => comparisonAt(metric, j))
+      .filter((value): value is number => value !== null);
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
   };
 
   const axes: string[] = [];
@@ -172,14 +145,23 @@ export function generateChartMarkup(trend: TrendData, marks: ChartMark[] = []): 
   function series(metric: Metric, fmt: (v: number) => string, unit: string) {
     const field = FIELD[metric];
     const ghost = [...hist, ...fore.slice(0, 1)].map((w, k) => ({ x: xWeek(w), v: smooth(metric, k) }));
-    const expected = fore.map((w, j) => ({ x: xWeek(w), v: foreValue(metric, j) }));
-    const rawMax = Math.max(...hist.map((w) => w[field] as number), ...ghost.map((p) => p.v), ...expected.map((p) => p.v)) * 1.04;
+    const forecasts = forecastValues(trend, metric);
+    const expected = fore.map((w, j) => ({ x: xWeek(w), v: forecasts[j] }));
+    const rawMax = Math.max(...hist.map((w) => w[field]), ...ghost.map((p) => p.v ?? 0), ...expected.map((p) => p.v)) * 1.04;
     const step = AXIS_STEP[metric];
-    const max = Math.ceil(rawMax / step) * step;
+    const max = Math.max(step, Math.ceil(rawMax / step) * step);
     const y = yScale(max);
     axes.push(`<div class="chart-axis focus-unit unit-${unit}">${[0, .5, 1].map(ratio => `<span style="top:${f(y(max * ratio) / H * 100)}%">${metric === "revenue" && ratio ? "$" + max * ratio / 1000 + "k" : fmtNum(max * ratio)}</span>`).join("")}</div>`);
     const pts = hist.map((w) => ({ x: xWeek(w), y: y(w[field] as number) }));
-    const gpts = ghost.map((p) => ({ x: p.x, y: y(p.v) }));
+    const ghostPaths: string[] = [];
+    let segment: { x: number; y: number }[] = [];
+    for (const point of ghost) {
+      if (point.v === null) {
+        if (segment.length) ghostPaths.push(monotone(segment));
+        segment = [];
+      } else segment.push({ x: point.x, y: y(point.v) });
+    }
+    if (segment.length) ghostPaths.push(monotone(segment));
     const last = hist[hist.length - 1];
     currentDots.push(`<span class="now-dot focus-unit unit-${unit}" style="left:${f(xWeek(last) / W * 100)}%;top:${f(y(last[field] as number) / H * 100)}%" aria-hidden="true"></span>`);
     const fpts = [{ x: xWeek(last), y: y(last[field] as number) }, ...expected.map((p) => ({ x: p.x, y: y(p.v) }))];
@@ -190,14 +172,14 @@ export function generateChartMarkup(trend: TrendData, marks: ChartMark[] = []): 
     return `
       <g class="series s-${unit}">
         ${[0, .5, 1].map((ratio) => `<line class="horizontal" x1="0" y1="${f(y(max * ratio))}" x2="${W}" y2="${f(y(max * ratio))}"/>`).join("")}
-        <path class="ghost" d="${monotone(gpts)}"/>
+        <path class="ghost" d="${ghostPaths.join(" ")}"/>
         <path class="fore" d="${monotone(fpts)}"/>
         <path class="line" pathLength="1" d="${monotone(pts)}"/>
         <text class="peak" x="${px}" y="${py}" text-anchor="${anchor}">${fmt(peak[field] as number)} <tspan class="peak-k">· week of ${fmtDate(peak.t0)}${yr}</tspan></text>
       </g>`;
   }
 
-  const maxB = Math.max(...hist.map((w) => w.bookings));
+  const maxB = Math.max(1, ...hist.map((w) => w.bookings));
   const bars = hist.map((w, k) => {
     const barWidth = weekSlots.get(w.k)!.barWidth;
     const x0 = xWeek(w) - barWidth / 2;
@@ -241,7 +223,7 @@ export function generateChartMarkup(trend: TrendData, marks: ChartMark[] = []): 
     const lines = [
       `<text class="tip-t tip-k" x="{x}" y="{y}">Week of ${fmtDate(w.t0)}${yearOf(w.t0) !== yearOf(nowM) ? ", " + yearOf(w.t0) : ""}</text>`,
       `<text class="tip-t" x="{x}" y="{y}">${w.bookings} bookings <tspan class="tip-k">·</tspan> ${fmtMoney(w.rev)}</text>`,
-      `<text class="tip-t tip-k" x="{x}" y="{y}">Last year ${w.priorBookings} bookings · ${fmtMoney(w.priorRev)}</text>`,
+      `<text class="tip-t tip-k" x="{x}" y="{y}">${w.priorBookings === null || w.priorRev === null ? "Prior year unavailable" : `Last year ${w.priorBookings} bookings · ${fmtMoney(w.priorRev)}`}</text>`,
       `<text class="tip-t tip-k" x="{x}" y="{y}">${fmtNum(w.visits)} visits · ${fmtNum(w.adViews)} ad views</text>`,
     ];
     if (act) {
@@ -269,7 +251,7 @@ export function generateChartMarkup(trend: TrendData, marks: ChartMark[] = []): 
     return `.hero:has(#fd-${id}:hover) #mk-${id},.hero:has(#fd-${id}:focus-within) #mk-${id},.hero:has(#fd-${id}:hover) #action-tip-${id},.hero:has(#fd-${id}:focus-within) #action-tip-${id},.hero:has(#fd-${id}:hover) #action-dot-${id},.hero:has(#fd-${id}:focus-within) #action-dot-${id},.hero:has(#mk-${id}:focus-visible) #action-dot-${id},.hero:has(#mk-${id}:focus-visible) #action-tip-${id}{opacity:1}`;
   }).join("");
   const actionDots = railMarks.map((m) => `<span class="action-dot${m.d >= yearEnd ? " is-planned" : ""}" id="action-dot-${m.railId}" style="left:${f(xOf(m.d) / W * 100)}%;top:${f(BAR_BASE / H * 100)}%" aria-hidden="true"></span>`).join("");
-  const htmlTips = hist.map((w, k) => `<div class="chart-tip" id="week-tip-${74 + k}" style="--anchor:${f(xWeek(w) / W * 100)}%"><strong>Week of ${fmtDate(w.t0)}</strong><span>${w.bookings} direct bookings &middot; ${fmtMoney(w.rev)}</span><small>Prior year: ${w.priorBookings} &middot; ${fmtMoney(w.priorRev)}</small></div>`).join("") +
+  const htmlTips = hist.map((w, k) => `<div class="chart-tip" id="week-tip-${74 + k}" style="--anchor:${f(xWeek(w) / W * 100)}%"><strong>Week of ${fmtDate(w.t0)}</strong><span>${w.bookings} direct bookings &middot; ${fmtMoney(w.rev)}</span><small>${w.priorBookings === null || w.priorRev === null ? "Prior year unavailable" : `Prior year: ${w.priorBookings} &middot; ${fmtMoney(w.priorRev)}`}</small></div>`).join("") +
     railMarks.map((m) => `<div class="chart-tip action-tip" id="action-tip-${m.railId}" style="--anchor:${f(xOf(m.d) / W * 100)}%"><strong>${fmtDate(m.d)} &middot; Autumn</strong><span>${escape(m.d >= yearEnd ? m.plannedLabel || m.label : m.label)}</span></div>`).join("");
   const fadeStart = xWeek(hist[hist.length - 1]);
   const fadeEnd = fore.length ? xWeek(fore[0]) : fadeStart;
